@@ -1,0 +1,78 @@
+name: Deploiement GitHub Pages
+
+# Se declenche a chaque envoi de code sur la branche principale,
+# et peut aussi etre lance manuellement depuis l'onglet Actions.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permissions minimales necessaires a la publication sur Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une seule publication a la fois. Les executions en attente sont annulees,
+# mais une publication en cours va toujours a son terme.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Compilation
+  # ---------------------------------------------------------------------------
+  build:
+    name: Compilation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Recuperation du code
+        uses: actions/checkout@v4
+
+      - name: Installation de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installation des dependances
+        run: npm ci
+
+      - name: Verification des types
+        run: npm run typecheck
+
+      - name: Compilation
+        # GitHub Pages sert le site depuis /<nom-du-depot>/ et non depuis la
+        # racine. Le nom du depot est lu automatiquement : renommer le depot
+        # ne cassera pas le deploiement.
+        run: npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+
+      - name: Configuration de Pages
+        uses: actions/configure-pages@v5
+
+      - name: Envoi du resultat
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  # ---------------------------------------------------------------------------
+  # 2. Publication
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Publication
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Publication sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
