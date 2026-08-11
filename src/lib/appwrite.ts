@@ -5,16 +5,15 @@
  * Ces deux valeurs sont publiques par conception : l'identifiant de projet et
  * l'URL du point d'entree figurent dans tout code client Appwrite. La securite
  * ne repose jamais sur leur confidentialite, mais sur les permissions declarees
- * cote serveur (collections, buckets, Teams).
+ * cote serveur (tables, compartiments, equipes).
  *
  * AUCUNE CLE API NE DOIT FIGURER DANS CE FICHIER NI DANS AUCUN FICHIER DU DEPOT.
- *
- * Les valeurs reelles seront renseignees a l'etape 0.3, apres creation du projet
- * Appwrite. En leur absence, `estConfigure` vaut false et l'application affiche
- * un message explicite plutot que d'echouer silencieusement.
+ * La cle utilisee par le script d'installation reste dans .env.local, qui n'est
+ * jamais versionne, et n'a aucun prefixe VITE_ : elle n'est donc jamais incluse
+ * dans le code compile.
  */
 
-import { Client, Account, Databases, Storage, Teams } from 'appwrite';
+import { Client, Account, TablesDB, Storage, Teams } from 'appwrite';
 
 const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT ?? '';
 const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID ?? '';
@@ -29,19 +28,20 @@ if (estConfigure) {
 }
 
 export const account = new Account(client);
-export const databases = new Databases(client);
+export const tablesDB = new TablesDB(client);
 export const storage = new Storage(client);
 export const teams = new Teams(client);
 
 export { client };
 
-/**
- * Identifiants des collections et buckets, definis a l'etape 0.4.
- * Regroupes ici pour eviter les chaines de caracteres disseminees dans le code.
- */
+/** Base de donnees creee a l'etape 0.4. */
 export const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID ?? 'affiches-em';
 
-export const COLLECTIONS = {
+/**
+ * Identifiants des tables et compartiments.
+ * Regroupes ici pour eviter les chaines de caracteres disseminees dans le code.
+ */
+export const TABLES = {
   MARQUES: 'marques',
   ARTICLES: 'articles',
   CAMPAGNES: 'campagnes',
@@ -51,8 +51,34 @@ export const COLLECTIONS = {
   DEMANDES_ARTICLE: 'demandes-article',
 } as const;
 
-export const BUCKETS = {
-  PHOTOS_PRODUITS: 'photos-produits',
-  LOGOS_MARQUES: 'logos-marques',
-  PICTOGRAMMES: 'pictogrammes',
+/**
+ * Compartiment unique regroupant tous les visuels.
+ *
+ * Les trois familles envisagees au cadrage (photos produits, logos de marques,
+ * pictogrammes) partagent les memes permissions et les memes reglages : les
+ * separer n'apportait qu'un confort de rangement, et le plan gratuit d'Appwrite
+ * n'autorise de toute facon qu'un compartiment.
+ *
+ * La distinction se fait par un prefixe dans l'identifiant du fichier, ce qui
+ * permet aussi de retrouver directement un visuel a partir de la donnee qui le
+ * porte, sans stocker d'identifiant supplementaire.
+ */
+export const BUCKET_MEDIAS = 'medias';
+
+/** Construit l'identifiant du logo d'une marque. */
+export const idLogo = (marqueId: string) => `logo_${marqueId}`;
+
+/** Construit l'identifiant de la photo d'un article, a partir de son EAN. */
+export const idPhotoProduit = (ean: string) => `photo_${ean}`;
+
+/** Construit l'identifiant d'un pictogramme de la bibliotheque. */
+export const idPictogramme = (code: string) => `picto_${code}`;
+
+/** Construit l'identifiant du visuel de fond d'une affiche. */
+export const idVisuelFond = (afficheId: string) => `fond_${afficheId}`;
+
+/** Equipes Appwrite portant les roles applicatifs. */
+export const EQUIPES = {
+  OPERATEURS: 'operateurs',
+  ADMINISTRATEURS: 'administrateurs',
 } as const;
