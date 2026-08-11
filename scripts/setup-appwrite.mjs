@@ -331,14 +331,22 @@ const BUCKET_MEDIAS = { id: 'medias', nom: 'Medias', tailleMaxMo: 10 };
 /* Utilitaires                                                                */
 /* ========================================================================== */
 
+/** @param {string} msg */
 const ok = (msg) => console.log(`  \x1b[32m✓\x1b[0m ${msg}`);
+/** @param {string} msg */
 const skip = (msg) => console.log(`  \x1b[90m•\x1b[0m ${msg} \x1b[90m(deja present)\x1b[0m`);
+/** @param {string} msg */
 const titre = (msg) => console.log(`\n\x1b[1m${msg}\x1b[0m`);
+/** @param {string} msg */
 const echec = (msg) => console.log(`  \x1b[31m✗\x1b[0m ${msg}`);
 
+/** @param {number} ms */
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Vrai si l'erreur Appwrite signale un element deja existant. */
+/**
+ * Vrai si l'erreur Appwrite signale un element deja existant.
+ * @param {any} erreur
+ */
 function estDejaExistant(erreur) {
   const code = erreur?.code;
   const type = erreur?.type ?? '';
@@ -353,6 +361,8 @@ function estDejaExistant(erreur) {
  * une erreur de quota plutot qu'avec un conflit classique. On ne peut pas
  * distinguer les deux situations sans droit de lecture, que la cle
  * d'installation n'a pas necessairement.
+ *
+ * @param {any} erreur
  */
 function estQuotaAtteint(erreur) {
   const type = erreur?.type ?? '';
@@ -445,7 +455,10 @@ async function installerBase() {
   }
 }
 
-/** @param {Table} table */
+/**
+ * @param {Table} table
+ * @param {Colonne} colonne
+ */
 async function installerColonne(table, colonne) {
   const base = { databaseId: DATABASE_ID, tableId: table.id, key: colonne.key };
 
@@ -599,7 +612,7 @@ Etapes suivantes :
 `);
 }
 
-main().catch((erreur) => {
+main().catch((/** @type {any} */ erreur) => {
   console.error('');
   echec('Installation interrompue.');
   console.error(`\n  ${erreur?.message ?? erreur}`);
