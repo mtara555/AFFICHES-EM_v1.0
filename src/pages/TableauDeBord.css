@@ -157,3 +157,7 @@
 .tableau tbody tr:last-child td {
   border-bottom: none;
 }
+
+.carte--session {
+  border-left: 3px solid var(--ok);
+}

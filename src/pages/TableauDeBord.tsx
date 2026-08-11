@@ -1,5 +1,7 @@
 import { AppShell } from '../components/AppShell';
 import { estConfigure } from '../lib/appwrite';
+import { useAuth } from '../context/AuthContext';
+import { LIBELLE_ROLE } from '../lib/auth';
 import { APP_FULL_NAME, FORMATS, FORMATS_ORDONNES } from '../config/constants';
 import './TableauDeBord.css';
 
@@ -11,10 +13,11 @@ interface Etape {
 
 const ETAPES: readonly Etape[] = [
   { code: '0.1', libelle: 'Structure du depot et coquille PWA', etat: 'fait' },
-  { code: '0.2', libelle: 'Deploiement automatique sur GitHub Pages', etat: 'en-cours' },
-  { code: '0.3', libelle: 'Creation du projet Appwrite', etat: 'a-venir' },
-  { code: '0.4', libelle: 'Collections, buckets et permissions', etat: 'a-venir' },
-  { code: '0.5', libelle: 'Connexion utilisateur et roles', etat: 'a-venir' },
+  { code: '0.2', libelle: 'Deploiement automatique sur GitHub Pages', etat: 'fait' },
+  { code: '0.3', libelle: 'Creation du projet Appwrite', etat: 'fait' },
+  { code: '0.4', libelle: 'Tables, compartiment et permissions', etat: 'fait' },
+  { code: '0.5', libelle: 'Connexion utilisateur et roles', etat: 'fait' },
+  { code: '1.0', libelle: 'Catalogue produits et marques', etat: 'en-cours' },
 ];
 
 const LIBELLE_ETAT: Record<Etape['etat'], string> = {
@@ -24,11 +27,27 @@ const LIBELLE_ETAT: Record<Etape['etat'], string> = {
 };
 
 export function TableauDeBord() {
+  const { utilisateur } = useAuth();
+
   return (
     <AppShell
       titre="Tableau de bord"
-      sousTitre={`${APP_FULL_NAME} — installation en cours`}
+      sousTitre={`${APP_FULL_NAME} — phase 0 terminee`}
     >
+      {utilisateur ? (
+        <section className="carte carte--session">
+          <h2 className="carte__titre">Session</h2>
+          <p className="carte__texte">
+            Connecte en tant que <strong>{utilisateur.nom}</strong> ({utilisateur.email}),
+            avec le role <strong>{LIBELLE_ROLE[utilisateur.role]}</strong>.
+          </p>
+          <p className="carte__texte carte__texte--discret">
+            Ce role decoule de votre appartenance aux equipes Appwrite. Il determine aussi ce que
+            le serveur autorise, et pas seulement ce que l&apos;interface affiche.
+          </p>
+        </section>
+      ) : null}
+
       <section className="carte carte--statut">
         <h2 className="carte__titre">Etat de l'installation</h2>
         <ol className="etapes">

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { APP_NAME, APP_VERSION } from '../config/constants';
+import { useAuth } from '../context/AuthContext';
+import { LIBELLE_ROLE } from '../lib/auth';
 import './AppShell.css';
 
 interface EntreeNavigation {
@@ -91,6 +93,8 @@ interface AppShellProps {
 }
 
 export function AppShell({ titre, sousTitre, actions, children }: AppShellProps) {
+  const { utilisateur, deconnexion } = useAuth();
+
   return (
     <div className="shell">
       <aside className="shell__sidebar">
@@ -128,10 +132,41 @@ export function AppShell({ titre, sousTitre, actions, children }: AppShellProps)
           )}
         </nav>
 
+        {utilisateur ? (
+          <div className="shell__compte">
+            <div className="shell__compte-infos">
+              <span className="shell__compte-nom">{utilisateur.nom}</span>
+              <span className="shell__compte-role">{LIBELLE_ROLE[utilisateur.role]}</span>
+            </div>
+            <button
+              type="button"
+              className="shell__deconnexion"
+              onClick={() => void deconnexion()}
+              title="Se deconnecter"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.9}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <path d="M16 17l5-5-5-5M21 12H9" />
+              </svg>
+              <span className="visually-hidden">Se deconnecter</span>
+            </button>
+          </div>
+        ) : null}
+
         <div className="shell__sidebar-foot">
           Departement Electromenager
           <br />
-          Etape 0.1 — coquille applicative
+          Phase 0 — installation
         </div>
       </aside>
 
