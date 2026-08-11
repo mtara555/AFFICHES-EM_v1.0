@@ -44,12 +44,24 @@ jobs:
         run: npm run typecheck
 
       - name: Compilation
-        # GitHub Pages sert le site depuis /<nom-du-depot>/ et non depuis la
-        # racine. Le nom du depot est lu automatiquement : renommer le depot
-        # ne cassera pas le deploiement.
+        # Vite inscrit les variables VITE_* dans le code AU MOMENT de la
+        # compilation : elles doivent donc etre presentes ici, et pas seulement
+        # dans le fichier .env.local du poste de developpement.
+        #
+        # Ces valeurs sont declarees en "Variables" (et non en "Secrets") du
+        # depot, car elles sont publiques par conception : l'identifiant de
+        # projet et l'endpoint figurent dans le code de toute application
+        # Appwrite. La securite repose sur les permissions declarees cote
+        # Appwrite, jamais sur leur confidentialite.
         run: npm run build
         env:
+          # GitHub Pages sert le site depuis /<nom-du-depot>/ et non depuis la
+          # racine. Le nom du depot est lu automatiquement : renommer le depot
+          # ne cassera pas le deploiement.
           BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_APPWRITE_ENDPOINT: ${{ vars.VITE_APPWRITE_ENDPOINT }}
+          VITE_APPWRITE_PROJECT_ID: ${{ vars.VITE_APPWRITE_PROJECT_ID }}
+          VITE_APPWRITE_DATABASE_ID: ${{ vars.VITE_APPWRITE_DATABASE_ID }}
 
       - name: Configuration de Pages
         uses: actions/configure-pages@v5
@@ -75,6 +87,3 @@ jobs:
       - name: Publication sur GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-
-        
