@@ -65,8 +65,8 @@ export function TableauDeBord() {
         <h2 className="carte__titre">Connexion a Appwrite</h2>
         {estConfigure ? (
           <p className="carte__texte">
-            Les parametres de connexion sont renseignes. Les collections seront creees a
-            l&apos;etape 0.4.
+            Les parametres de connexion sont renseignes. La structure de donnees est en place :
+            7 tables et 1 compartiment de fichiers.
           </p>
         ) : (
           <>

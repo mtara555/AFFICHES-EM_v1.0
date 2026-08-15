@@ -11,6 +11,8 @@ interface EntreeNavigation {
   readonly icone: ReactNode;
   /** Fonctionnalite non encore livree : l'entree reste visible mais desactivee. */
   readonly aVenir?: boolean;
+  /** Entree masquee aux operateurs. */
+  readonly reserveAdmin?: boolean;
 }
 
 const Icone = ({ children }: { children: ReactNode }) => (
@@ -62,6 +64,17 @@ const NAVIGATION: readonly EntreeNavigation[] = [
     ),
   },
   {
+    to: '/marques',
+    libelle: 'Marques',
+    reserveAdmin: true,
+    icone: (
+      <Icone>
+        <path d="M12 2 3 11v2l9 9 9-9V4h-9Z" />
+        <circle cx="8.5" cy="7.5" r="1.4" fill="currentColor" stroke="none" />
+      </Icone>
+    ),
+  },
+  {
     to: '/catalogue',
     libelle: 'Catalogue',
     aVenir: true,
@@ -109,7 +122,9 @@ export function AppShell({ titre, sousTitre, actions, children }: AppShellProps)
         </div>
 
         <nav className="shell__nav" aria-label="Navigation principale">
-          {NAVIGATION.map((entree) =>
+          {NAVIGATION.filter(
+            (entree) => !entree.reserveAdmin || utilisateur?.role === 'administrateur',
+          ).map((entree) =>
             entree.aVenir ? (
               <span key={entree.to} className="shell__nav-link shell__nav-link--disabled">
                 <span className="shell__nav-icon">{entree.icone}</span>
