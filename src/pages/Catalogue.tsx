@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { listerMarques, type Marque } from '../lib/marques';
 import {
@@ -180,9 +181,14 @@ export function Catalogue() {
       titre="Catalogue"
       sousTitre={chargement ? 'Chargement…' : `${total} article(s)`}
       actions={
-        <button type="button" className="bouton bouton--principal" onClick={ouvrirCreation}>
-          Nouvel article
-        </button>
+        <>
+          <Link to="/catalogue/import" className="bouton bouton--discret">
+            Importer un fichier
+          </Link>
+          <button type="button" className="bouton bouton--principal" onClick={ouvrirCreation}>
+            Nouvel article
+          </button>
+        </>
       }
     >
       {erreur ? (

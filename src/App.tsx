@@ -5,6 +5,9 @@ import { Connexion } from './pages/Connexion';
 import { TableauDeBord } from './pages/TableauDeBord';
 import { Marques } from './pages/Marques';
 import { Catalogue } from './pages/Catalogue';
+import { ImportCatalogue } from './pages/ImportCatalogue';
+import { Campagnes } from './pages/Campagnes';
+import { Saisie } from './pages/Saisie';
 
 export function App() {
   return (
@@ -42,6 +45,37 @@ export function App() {
             </RouteProtegee>
           }
         />
+
+        <Route
+          path="/catalogue/import"
+          element={
+            <RouteProtegee roles={['administrateur']}>
+              <ImportCatalogue />
+            </RouteProtegee>
+          }
+        />
+
+        <Route
+          path="/campagnes"
+          element={
+            <RouteProtegee>
+              <Campagnes />
+            </RouteProtegee>
+          }
+        />
+
+        <Route
+          path="/saisie/:campagneId"
+          element={
+            <RouteProtegee>
+              <Saisie />
+            </RouteProtegee>
+          }
+        />
+
+        {/* Sans campagne indiquee, on renvoie vers la liste plutot que vers un
+            ecran de saisie vide. */}
+        <Route path="/saisie" element={<Navigate to="/campagnes" replace />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

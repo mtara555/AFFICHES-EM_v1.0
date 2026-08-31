@@ -221,3 +221,10 @@
   background: rgba(200, 16, 46, 0.09);
   color: var(--danger);
 }
+
+/* Un lien stylise en bouton doit rester lisible et aligne. */
+a.bouton {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}

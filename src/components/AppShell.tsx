@@ -45,21 +45,10 @@ const NAVIGATION: readonly EntreeNavigation[] = [
   {
     to: '/campagnes',
     libelle: 'Campagnes',
-    aVenir: true,
     icone: (
       <Icone>
         <rect x="3" y="5" width="18" height="16" rx="2" />
         <path d="M3 10h18M8 3v4M16 3v4" />
-      </Icone>
-    ),
-  },
-  {
-    to: '/saisie',
-    libelle: 'Saisie',
-    aVenir: true,
-    icone: (
-      <Icone>
-        <path d="M4 4h16v5H4zM4 13h16M4 18h10" />
       </Icone>
     ),
   },
