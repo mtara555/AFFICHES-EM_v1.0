@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
-    "setup:appwrite": "node scripts/setup-appwrite.mjs"
+    "setup:appwrite": "node scripts/setup-appwrite.mjs",
+    "migrate:articles": "node scripts/migrate-articles.mjs"
   },
   "dependencies": {
     "appwrite": "^26.2.0",

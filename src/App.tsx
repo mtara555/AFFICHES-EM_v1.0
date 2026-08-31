@@ -4,6 +4,7 @@ import { RouteProtegee } from './components/RouteProtegee';
 import { Connexion } from './pages/Connexion';
 import { TableauDeBord } from './pages/TableauDeBord';
 import { Marques } from './pages/Marques';
+import { Catalogue } from './pages/Catalogue';
 
 export function App() {
   return (
@@ -27,6 +28,17 @@ export function App() {
           element={
             <RouteProtegee roles={['administrateur']}>
               <Marques />
+            </RouteProtegee>
+          }
+        />
+
+        {/* Le catalogue est consultable par tous, modifiable par les seuls
+            administrateurs : le controle fin se fait cote Appwrite. */}
+        <Route
+          path="/catalogue"
+          element={
+            <RouteProtegee>
+              <Catalogue />
             </RouteProtegee>
           }
         />

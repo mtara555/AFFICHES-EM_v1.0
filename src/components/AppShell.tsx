@@ -77,7 +77,6 @@ const NAVIGATION: readonly EntreeNavigation[] = [
   {
     to: '/catalogue',
     libelle: 'Catalogue',
-    aVenir: true,
     icone: (
       <Icone>
         <path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2Z" />
