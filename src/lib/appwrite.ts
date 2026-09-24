@@ -71,8 +71,14 @@ export const idLogo = (marqueId: string) => `logo_${marqueId}`;
 /** Construit l'identifiant de la photo d'un article, a partir de son EAN. */
 export const idPhotoProduit = (ean: string) => `photo_${ean}`;
 
-/** Construit l'identifiant d'un pictogramme de la bibliotheque. */
-export const idPictogramme = (code: string) => `picto_${code}`;
+/**
+ * Construit l'identifiant d'un pictogramme de la bibliotheque.
+ *
+ * Appwrite n'accepte dans un identifiant que lettres, chiffres, point, tiret et
+ * souligne (36 caracteres au plus) : « SMART TV » devient `picto_SMART_TV`.
+ */
+export const idPictogramme = (code: string) =>
+  `picto_${code.trim().toUpperCase().replace(/[^A-Z0-9._-]+/g, '_')}`.slice(0, 36);
 
 /** Construit l'identifiant du visuel de fond d'une affiche. */
 export const idVisuelFond = (afficheId: string) => `fond_${afficheId}`;
