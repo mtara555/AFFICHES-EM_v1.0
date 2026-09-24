@@ -174,6 +174,12 @@ export function Campagnes() {
                     >
                       Saisir
                     </Link>
+                    <Link
+                      to={`/affiches/${campagne.id}`}
+                      className="bouton bouton--discret bouton--petit"
+                    >
+                      Affiches
+                    </Link>
                     <button
                       type="button"
                       className="bouton bouton--danger bouton--petit"

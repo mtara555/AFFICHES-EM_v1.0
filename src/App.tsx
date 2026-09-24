@@ -8,6 +8,7 @@ import { Catalogue } from './pages/Catalogue';
 import { ImportCatalogue } from './pages/ImportCatalogue';
 import { Campagnes } from './pages/Campagnes';
 import { Saisie } from './pages/Saisie';
+import { Impression } from './pages/Impression';
 
 export function App() {
   return (
@@ -69,6 +70,16 @@ export function App() {
           element={
             <RouteProtegee>
               <Saisie />
+            </RouteProtegee>
+          }
+        />
+
+        {/* Apercu a l'echelle et impression / export PDF d'une campagne. */}
+        <Route
+          path="/affiches/:campagneId"
+          element={
+            <RouteProtegee>
+              <Impression />
             </RouteProtegee>
           }
         />
