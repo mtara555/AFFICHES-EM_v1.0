@@ -161,3 +161,132 @@
 .carte--session {
   border-left: 3px solid var(--ok);
 }
+
+/* --------------------------------------------------------------------------
+   Statistiques
+   -------------------------------------------------------------------------- */
+
+.tuiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.tuile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.tuile__libelle {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.tuile__valeur {
+  font-size: 2rem;
+  font-weight: var(--weight-semibold);
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.tuile__detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.tuile__detail i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-left: 4px;
+}
+
+.tuile__detail i:first-child {
+  margin-left: 0;
+}
+
+.carte__entete-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.carte__entete-stats .carte__titre {
+  margin-bottom: var(--space-1);
+}
+
+.segments {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.segments__bouton {
+  border: 0;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.segments__bouton:hover {
+  color: var(--ink);
+}
+
+.segments__bouton.est-actif {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+  box-shadow: 0 1px 2px rgba(14, 19, 48, 0.12);
+}
+
+.segments__bouton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.carte .legende {
+  margin-bottom: var(--space-2);
+}
+
+.carte .graphique {
+  margin-bottom: var(--space-3);
+}
+
+.tableau-defilant {
+  overflow-x: auto;
+  margin-top: var(--space-3);
+}
+
+.tableau--stats td,
+.tableau--stats th {
+  font-variant-numeric: tabular-nums;
+}
+
+.tableau--stats th[scope='row'] {
+  font-weight: var(--weight-normal);
+  text-transform: capitalize;
+}
+
+.bouton--espace {
+  margin-top: var(--space-3);
+}
