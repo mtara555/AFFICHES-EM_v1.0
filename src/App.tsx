@@ -8,6 +8,7 @@ import { Catalogue } from './pages/Catalogue';
 import { ImportCatalogue } from './pages/ImportCatalogue';
 import { Campagnes } from './pages/Campagnes';
 import { Saisie } from './pages/Saisie';
+import { Apercu } from './pages/Apercu';
 
 export function App() {
   return (
@@ -69,6 +70,15 @@ export function App() {
           element={
             <RouteProtegee>
               <Saisie />
+            </RouteProtegee>
+          }
+        />
+
+        <Route
+          path="/apercu/:campagneId"
+          element={
+            <RouteProtegee>
+              <Apercu />
             </RouteProtegee>
           }
         />

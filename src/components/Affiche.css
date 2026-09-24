@@ -1,0 +1,298 @@
+/* ==========================================================================
+   AFFICHES-EM v1.0 — Rendu d'affiche
+   --------------------------------------------------------------------------
+   L'affiche est composee a l'echelle millimetrique reelle : la variable --mm
+   donne le nombre de pixels par millimetre. A 11,811 px/mm, le rendu
+   correspond a 300 dpi, resolution attendue en impression. Une valeur plus
+   faible sert simplement a l'apercu ecran, sans changer les proportions.
+
+   Les tailles typographiques proviennent du guide PLV ELECTRO : prix principal
+   138 pt, economie 48 pt, prix barre 32 pt, designation 28 a 60 pt.
+
+   La police BF Marjane n'etant pas disponible en webfont, une pile de
+   substitution geometrique et grasse est utilisee. Le rendu final devra etre
+   valide par le service communication.
+   ========================================================================== */
+
+.affiche {
+  --pt: calc(0.3527778 * var(--mm));
+  position: relative;
+  width: calc(var(--largeur) * var(--mm));
+  height: calc(var(--hauteur) * var(--mm));
+  background: #ffffff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Arial Black', 'Segoe UI', Impact, sans-serif;
+  color: var(--brand-blue-deep);
+  box-shadow: 0 10px 30px -12px rgba(14, 19, 48, 0.35);
+}
+
+.affiche * {
+  box-sizing: border-box;
+}
+
+/* Liseré degrade du modele papier, sur le bord gauche */
+.affiche__fond {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    #7b2d8e 0%,
+    #c0247e 14%,
+    #ffffff 30%,
+    #ffffff 100%
+  );
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Entete
+   -------------------------------------------------------------------------- */
+
+.affiche__entete {
+  position: relative;
+  text-align: center;
+  padding: calc(14 * var(--mm)) calc(8 * var(--mm)) 0;
+}
+
+.affiche__marque {
+  font-size: calc(32 * var(--pt) * var(--facteur));
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--brand-blue);
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.affiche__designation {
+  font-weight: 900;
+  color: var(--brand-blue);
+  line-height: 1.1;
+  margin-top: calc(3 * var(--mm));
+  text-transform: uppercase;
+}
+
+.affiche__reference {
+  font-size: calc(10 * var(--pt) * var(--facteur));
+  font-weight: 600;
+  color: #454b78;
+  margin-top: calc(2 * var(--mm));
+  font-family: 'Segoe UI', Arial, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   Pictogrammes
+   -------------------------------------------------------------------------- */
+
+.affiche__pictos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(2 * var(--mm));
+  padding: calc(6 * var(--mm)) calc(8 * var(--mm)) 0;
+}
+
+.picto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(16 * var(--mm));
+  padding: calc(2 * var(--mm)) calc(3 * var(--mm));
+  background: var(--brand-yellow);
+  color: var(--brand-yellow-ink);
+  font-size: calc(11 * var(--pt) * var(--facteur));
+  font-weight: 900;
+  border-radius: calc(2 * var(--mm));
+  text-align: center;
+  line-height: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Badges de service
+   -------------------------------------------------------------------------- */
+
+.affiche__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(2 * var(--mm));
+  padding: calc(4 * var(--mm)) calc(8 * var(--mm)) 0;
+}
+
+.badge {
+  padding: calc(1.6 * var(--mm)) calc(3.5 * var(--mm));
+  border-radius: calc(1.2 * var(--mm));
+  font-size: calc(10 * var(--pt) * var(--facteur));
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.badge--rouge {
+  background: var(--brand-red);
+}
+
+.badge--jaune {
+  background: var(--brand-yellow);
+  color: var(--brand-yellow-ink);
+}
+
+.badge--bleu {
+  background: var(--brand-teal);
+}
+
+.affiche__espace {
+  flex: 1;
+  min-height: calc(4 * var(--mm));
+}
+
+/* --------------------------------------------------------------------------
+   Bloc prix
+   -------------------------------------------------------------------------- */
+
+.affiche__prix {
+  position: relative;
+}
+
+.affiche__barre {
+  text-align: center;
+  font-size: calc(32 * var(--pt) * var(--facteur));
+  font-weight: 900;
+  color: #6a7099;
+  text-decoration: line-through;
+  text-decoration-color: var(--brand-red);
+  text-decoration-thickness: calc(0.9 * var(--mm));
+  line-height: 1;
+  margin-bottom: calc(1 * var(--mm));
+}
+
+.affiche__bande {
+  background: var(--brand-blue);
+  color: #ffffff;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  padding: calc(3 * var(--mm)) calc(5 * var(--mm)) calc(4 * var(--mm));
+}
+
+.affiche__entier {
+  font-size: calc(138 * var(--pt) * var(--facteur));
+  font-weight: 900;
+  line-height: 0.85;
+  letter-spacing: -0.01em;
+}
+
+.affiche__centimes {
+  font-size: calc(48 * var(--pt) * var(--facteur));
+  font-weight: 900;
+  line-height: 1;
+}
+
+.affiche__economie {
+  background: var(--brand-red);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(2 * var(--mm)) calc(6 * var(--mm));
+  font-size: calc(48 * var(--pt) * var(--facteur));
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.affiche__economie-arabe {
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   Pied : credit et code-barres
+   -------------------------------------------------------------------------- */
+
+.affiche__pied {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: calc(3 * var(--mm));
+  padding: calc(4 * var(--mm)) calc(6 * var(--mm)) calc(5 * var(--mm));
+}
+
+.affiche__credit {
+  display: flex;
+  flex-direction: column;
+  background: var(--brand-teal);
+  color: #ffffff;
+  border-radius: calc(2 * var(--mm));
+  padding: calc(2 * var(--mm)) calc(3.5 * var(--mm));
+  line-height: 1.15;
+}
+
+.affiche__credit-titre {
+  font-size: calc(8 * var(--pt) * var(--facteur));
+  font-weight: 700;
+  opacity: 0.92;
+}
+
+.affiche__credit-montant {
+  font-size: calc(20 * var(--pt) * var(--facteur));
+  font-weight: 900;
+}
+
+.affiche__credit-duree {
+  font-size: calc(8 * var(--pt) * var(--facteur));
+  font-weight: 700;
+  opacity: 0.92;
+}
+
+.affiche__codebarres {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(0.8 * var(--mm));
+}
+
+.affiche__codebarres svg {
+  width: calc(34 * var(--mm));
+  height: calc(11 * var(--mm));
+  display: block;
+}
+
+.affiche__codebarres-texte {
+  font-family: 'Courier New', monospace;
+  font-size: calc(8 * var(--pt) * var(--facteur));
+  letter-spacing: 0.14em;
+  color: #454b78;
+}
+
+.affiche__codebarres--absent .affiche__codebarres-texte {
+  color: #8a8fb3;
+}
+
+/* --------------------------------------------------------------------------
+   Logo enseigne
+   -------------------------------------------------------------------------- */
+
+.affiche__logo {
+  position: absolute;
+  right: calc(4 * var(--mm));
+  bottom: calc(4 * var(--mm));
+  width: calc(12 * var(--mm));
+  height: calc(12 * var(--mm));
+  border-radius: calc(2 * var(--mm));
+  background: var(--brand-blue);
+  color: var(--brand-yellow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(20 * var(--pt) * var(--facteur));
+  font-weight: 900;
+}
+
+/* Sur les petits formats, l'entete se resserre pour laisser la place au prix */
+.affiche--a6 .affiche__entete,
+.affiche--a7 .affiche__entete {
+  padding-top: calc(8 * var(--mm));
+}

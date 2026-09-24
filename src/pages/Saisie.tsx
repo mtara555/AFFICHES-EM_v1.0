@@ -167,9 +167,14 @@ export function Saisie() {
       titre={campagne ? campagne.nom : 'Saisie'}
       sousTitre={`${affiches.length} affiche(s) — format par defaut ${FORMATS[format].code}`}
       actions={
-        <Link to="/campagnes" className="bouton bouton--discret">
-          Toutes les campagnes
-        </Link>
+        <>
+          <Link to="/campagnes" className="bouton bouton--discret">
+            Campagnes
+          </Link>
+          <Link to={`/apercu/${campagneId}`} className="bouton bouton--principal">
+            Apercu et export
+          </Link>
+        </>
       }
     >
       {erreur ? (
