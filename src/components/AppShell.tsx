@@ -53,6 +53,17 @@ const NAVIGATION: readonly EntreeNavigation[] = [
     ),
   },
   {
+    to: '/affiches',
+    libelle: 'Affiches',
+    icone: (
+      <Icone>
+        <rect x="5" y="2" width="14" height="20" rx="1.5" />
+        <path d="M8 7h8M8 11h5" />
+        <rect x="8" y="14" width="8" height="4" rx="0.5" />
+      </Icone>
+    ),
+  },
+  {
     to: '/marques',
     libelle: 'Marques',
     reserveAdmin: true,

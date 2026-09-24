@@ -17,7 +17,9 @@ const ETAPES: readonly Etape[] = [
   { code: '0.3', libelle: 'Creation du projet Appwrite', etat: 'fait' },
   { code: '0.4', libelle: 'Tables, compartiment et permissions', etat: 'fait' },
   { code: '0.5', libelle: 'Connexion utilisateur et roles', etat: 'fait' },
-  { code: '1.0', libelle: 'Catalogue produits et marques', etat: 'en-cours' },
+  { code: '1.0', libelle: 'Catalogue produits et marques', etat: 'fait' },
+  { code: '2.0', libelle: 'Campagnes, saisie et regles commerciales', etat: 'fait' },
+  { code: '3.0', libelle: 'Affiches A4 Electro / Image & Son, impression PDF', etat: 'fait' },
 ];
 
 const LIBELLE_ETAT: Record<Etape['etat'], string> = {
@@ -32,7 +34,7 @@ export function TableauDeBord() {
   return (
     <AppShell
       titre="Tableau de bord"
-      sousTitre={`${APP_FULL_NAME} — phase 0 terminee`}
+      sousTitre={`${APP_FULL_NAME} — phase 3 terminee`}
     >
       {utilisateur ? (
         <section className="carte carte--session">

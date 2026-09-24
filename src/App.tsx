@@ -9,6 +9,7 @@ import { ImportCatalogue } from './pages/ImportCatalogue';
 import { Campagnes } from './pages/Campagnes';
 import { Saisie } from './pages/Saisie';
 import { Impression } from './pages/Impression';
+import { ListeAffiches } from './pages/ListeAffiches';
 
 export function App() {
   return (
@@ -70,6 +71,15 @@ export function App() {
           element={
             <RouteProtegee>
               <Saisie />
+            </RouteProtegee>
+          }
+        />
+
+        <Route
+          path="/affiches"
+          element={
+            <RouteProtegee>
+              <ListeAffiches />
             </RouteProtegee>
           }
         />
