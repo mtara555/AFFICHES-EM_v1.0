@@ -87,7 +87,7 @@ const NAVIGATION: readonly EntreeNavigation[] = [
   {
     to: '/parametres',
     libelle: 'Parametres',
-    aVenir: true,
+    reserveAdmin: true,
     icone: (
       <Icone>
         <circle cx="12" cy="12" r="3" />

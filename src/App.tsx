@@ -10,6 +10,7 @@ import { Campagnes } from './pages/Campagnes';
 import { Saisie } from './pages/Saisie';
 import { Impression } from './pages/Impression';
 import { ListeAffiches } from './pages/ListeAffiches';
+import { Parametres } from './pages/Parametres';
 
 export function App() {
   return (
@@ -90,6 +91,17 @@ export function App() {
           element={
             <RouteProtegee>
               <Impression />
+            </RouteProtegee>
+          }
+        />
+
+        {/* Regles commerciales : modification reservee aux administrateurs,
+            verrouillee aussi cote Appwrite par les permissions de la table. */}
+        <Route
+          path="/parametres"
+          element={
+            <RouteProtegee roles={['administrateur']}>
+              <Parametres />
             </RouteProtegee>
           }
         />
