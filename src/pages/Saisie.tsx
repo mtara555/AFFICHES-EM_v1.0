@@ -21,6 +21,9 @@ import {
   type ParametresRegles,
 } from '../lib/regles';
 import { FORMATS, FORMATS_ORDONNES, type FormatAffiche } from '../config/constants';
+import { AfficheA4 } from '../components/affiche/AfficheA4';
+import { Reduction } from '../components/affiche/Reduction';
+import { preparerDonnees } from '../lib/affiche-rendu';
 import './Saisie.css';
 
 export function Saisie() {
@@ -95,6 +98,24 @@ export function Saisie() {
     }
   }
 
+  /** Affiche telle qu'elle sera imprimee, recalculee a chaque frappe. */
+  const apercu = useMemo(() => {
+    if (!article) return null;
+    return preparerDonnees(
+      {
+        cle: 'apercu',
+        article,
+        marque: marques.find((m) => m.id === article.marqueId),
+        prixBarre: Number(prixBarre.replace(',', '.')) || 0,
+        prixPrincipal: Number(prixPrincipal.replace(',', '.')) || 0,
+        nouveaute,
+        stockLimite,
+        promotion,
+      },
+      parametres,
+    );
+  }, [article, marques, prixBarre, prixPrincipal, nouveaute, stockLimite, promotion, parametres]);
+
   const regles = useMemo(
     () =>
       appliquerRegles(
@@ -167,9 +188,16 @@ export function Saisie() {
       titre={campagne ? campagne.nom : 'Saisie'}
       sousTitre={`${affiches.length} affiche(s) — format par defaut ${FORMATS[format].code}`}
       actions={
-        <Link to="/campagnes" className="bouton bouton--discret">
-          Toutes les campagnes
-        </Link>
+        <>
+          <Link to="/campagnes" className="bouton bouton--discret">
+            Toutes les campagnes
+          </Link>
+          {campagneId && affiches.length > 0 ? (
+            <Link to={`/affiches/${campagneId}`} className="bouton bouton--principal">
+              Apercu & impression
+            </Link>
+          ) : null}
+        </>
       }
     >
       {erreur ? (
@@ -350,6 +378,15 @@ export function Saisie() {
                 </div>
               </div>
             </div>
+
+            {apercu ? (
+              <div className="apercu-affiche">
+                <h3 className="sous-titre">Apercu de l&apos;affiche A4</h3>
+                <Reduction echelle={0.42} className="apercu-affiche__feuille">
+                  <AfficheA4 donnees={apercu} />
+                </Reduction>
+              </div>
+            ) : null}
 
             <div className="actions-formulaire">
               <button

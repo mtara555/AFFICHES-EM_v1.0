@@ -98,3 +98,25 @@ cp .env.example .env.local
 **Chemin de base dynamique** — GitHub Pages sert le site depuis `/<nom-du-dépôt>/`. La variable `BASE_PATH`, injectée par le workflow de déploiement, ajuste automatiquement les chemins des ressources et du manifeste PWA.
 
 **Règles commerciales dans `constants.ts`** — le barème de crédit et les seuils y figurent comme valeurs par défaut. À partir de l'étape 0.4, ils seront lus depuis Appwrite et modifiables par un administrateur, conformément au document de cadrage.
+
+---
+
+## Phase 3 — Génération des affiches A4 (Electro / Image & Son)
+
+Reproduction fidèle du modèle PowerPoint `EMPOTXA4.potx` (cotes en mm relevées dans le fichier).
+
+| Élément | Règle (identique à la macro `InsererDonnees`) |
+|---|---|
+| Gabarit | **Electro** (fond bleu) : gem, pem, cuisson, froid, lavage — **Nouvelles technologies** (fond rose) : image-son, nt, telephonie, pc. Forçable à l'impression. |
+| Logo | Fichier `logo_<idMarque>` du bucket `medias` ; à défaut, nom de la marque en toutes lettres. |
+| Pictos 1 à 6 | Fichiers `picto_<CODE>` ; à défaut, hexagone jaune (ou cartouche rouge « GARANTIE » pour `1AN`, `2ANS`, `5ANS`…). |
+| Prix barré | Affiché dès qu'il dépasse le prix de vente, avec le trait orange. |
+| Bandeau « وفر » | Seulement si la remise ≥ seuil (10 %). |
+| Crédit 0 % | À partir de 2 999 dh (12 / 15 / 18 / 24 mois). |
+| Livraison gratuite | À partir de 2 000 dh, sauf article exclu. |
+
+**Écrans** : aperçu en direct dans la saisie ; bouton **Affiches** (liste des campagnes) ou **Aperçu & impression** (saisie) → page `/affiches/:campagneId`.
+
+**Impression / PDF** : bouton *Imprimer / PDF*, puis A4, marges *Aucune*, échelle 100 %, *Graphiques d'arrière-plan* coché. Les formats A5 / A6 / A7 sont imposés automatiquement (2 / 4 / 8 par feuille A4).
+
+**Visuels fixes** : `public/affiches/` (cadres, crédit 0 %, livraison gratuite) — extraits du modèle PowerPoint.

@@ -169,7 +169,7 @@ export function AppShell({ titre, sousTitre, actions, children }: AppShellProps)
         <div className="shell__sidebar-foot">
           Departement Electromenager
           <br />
-          Phase 0 — installation
+          Phase 3 — generation des affiches
         </div>
       </aside>
 

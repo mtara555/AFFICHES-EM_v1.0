@@ -134,3 +134,17 @@
   font-weight: var(--weight-bold);
   color: var(--brand-blue);
 }
+
+/* --------------------------------------------------------------------------
+   Apercu de l'affiche en cours de saisie
+   -------------------------------------------------------------------------- */
+
+.apercu-affiche {
+  margin: var(--space-5) 0;
+}
+
+.apercu-affiche__feuille {
+  box-shadow: 0 2px 10px rgba(14, 19, 48, 0.18);
+  background: #fff;
+  max-width: 100%;
+}
