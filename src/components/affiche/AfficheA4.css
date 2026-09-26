@@ -4,24 +4,32 @@
    Toutes les dimensions sont en millimetres et en points, unites du modele
    PowerPoint : l'affiche est imprimee a l'echelle 1, sans conversion.
 
-   Polices : le modele utilise « BF Marjane Black » et « BF Marjane Medium ».
-   Si elles sont installees sur le poste, le navigateur les emploie ; sinon, une
-   police systeme grasse prend le relais. Pour les embarquer dans l'application,
-   deposer les fichiers .woff2 dans public/fonts/ et ajouter leur url() au
-   @font-face ci-dessous.
+   Polices : « BF Marjane Black » et « BF Marjane Medium », les polices du
+   modele, sont embarquees dans l'application (src/assets/fonts, format
+   WOFF2). Elles s'affichent donc sur tous les postes, sans installation, et
+   restent disponibles hors ligne grace au cache de la PWA. Si elles sont deja
+   installees sur le poste, la version locale est utilisee en priorite.
    ========================================================================== */
 
 @font-face {
   font-family: 'Affiche Forte';
-  src: local('BF Marjane Black'), local('BFMarjane-Black');
+  src:
+    local('BF Marjane Black'),
+    local('BFMarjane-Black'),
+    url('../../assets/fonts/BFMarjane-Black.woff2') format('woff2');
   font-weight: 900;
+  font-style: normal;
   font-display: block;
 }
 
 @font-face {
   font-family: 'Affiche Texte';
-  src: local('BF Marjane Medium'), local('BFMarjane-Medium');
+  src:
+    local('BF Marjane Medium'),
+    local('BFMarjane-Medium'),
+    url('../../assets/fonts/BFMarjane-Medium.woff2') format('woff2');
   font-weight: 500;
+  font-style: normal;
   font-display: block;
 }
 

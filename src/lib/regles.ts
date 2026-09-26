@@ -103,10 +103,15 @@ export function appliquerRegles(
 
 /** Formate un montant au format « # ##0,00 » utilise sur les affiches. */
 export function formaterMontant(valeur: number): string {
-  return valeur.toLocaleString('fr-FR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  // Le separateur de milliers francais est une espace fine insecable (U+202F),
+  // absente des polices BF Marjane : on la remplace par l'espace insecable
+  // classique (U+00A0), que la police contient.
+  return valeur
+    .toLocaleString('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    .replace(/\u202f/g, '\u00a0');
 }
 
 /* -------------------------------------------------------------------------- */
