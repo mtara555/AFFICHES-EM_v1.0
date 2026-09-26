@@ -70,7 +70,10 @@ export function Impression() {
   const [choixGabarit, setChoixGabarit] = useState<string>('auto');
   const [operations, setOperations] = useState<GabaritOperation[]>([]);
   const [messageGabarit, setMessageGabarit] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(0.5);
+  // Sur telephone, l'apercu tient dans la largeur de l'ecran (A4 = 794 px a l'echelle 1).
+  const [zoom, setZoom] = useState(() =>
+    Math.max(0.25, Math.min(0.5, (window.innerWidth - 48) / 794)),
+  );
   const [preparation, setPreparation] = useState(false);
 
   const charger = useCallback(async () => {
