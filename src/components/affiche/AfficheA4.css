@@ -74,6 +74,10 @@
   z-index: 10;
 }
 
+.affiche__cadre--dessous {
+  z-index: 0;
+}
+
 .affiche__image {
   object-fit: fill;
 }

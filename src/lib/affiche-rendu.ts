@@ -10,13 +10,14 @@ import type { Affiche } from './campagnes';
 import type { Article } from './articles';
 import type { Marque } from './marques';
 import { appliquerRegles, formaterMontant, type ParametresRegles, type ResultatRegles } from './regles';
-import { gabaritPourCategorie, type Gabarit } from '../config/gabarits';
+import { resoudreModele, type ModeleAffiche } from '../config/gabarits';
 import { DEVISE } from '../config/constants';
 import { idLogo } from './appwrite';
 
 export interface DonneesAffiche {
   readonly cle: string;
-  readonly gabarit: Gabarit;
+  /** Cadre et mise en page de l'affiche. */
+  readonly modele: ModeleAffiche;
   readonly marqueNom: string;
   /**
    * Identifiant du logo dans le compartiment : celui enregistre sur la marque,
@@ -50,8 +51,8 @@ export interface EntreeDonnees {
   readonly nouveaute?: boolean;
   readonly stockLimite?: boolean;
   readonly promotion?: boolean;
-  /** Force un gabarit ; a defaut, il est deduit de la categorie de l'article. */
-  readonly gabarit?: Gabarit | null;
+  /** Impose un modele (gabarit de campagne) ; a defaut, il suit la categorie de l'article. */
+  readonly modele?: ModeleAffiche | null;
 }
 
 export function preparerDonnees(
@@ -64,7 +65,7 @@ export function preparerDonnees(
 
   return {
     cle: entree.cle,
-    gabarit: entree.gabarit ?? gabaritPourCategorie(article.categorie),
+    modele: resoudreModele(entree.modele, article.categorie),
     marqueNom: marque?.nom ?? '',
     logoFileId: marque ? (marque.logoFileId ?? idLogo(marque.id)) : null,
     designation: article.designation,
@@ -87,7 +88,7 @@ export function depuisAffiche(
   article: Article,
   marque: Marque | undefined,
   parametres: ParametresRegles,
-  gabarit?: Gabarit | null,
+  modele?: ModeleAffiche | null,
 ): DonneesAffiche {
   return preparerDonnees(
     {
@@ -99,7 +100,7 @@ export function depuisAffiche(
       nouveaute: affiche.nouveaute,
       stockLimite: affiche.stockLimite,
       promotion: affiche.promotion,
-      gabarit,
+      modele,
     },
     parametres,
   );

@@ -6,8 +6,11 @@
  * directement dans le fichier (1 mm = 36 000 EMU) : l'affiche imprimee depuis
  * l'application se superpose donc exactement a celle produite par PowerPoint.
  *
- * Les deux gabarits partagent la meme mise en page ; seul le cadre decoratif
- * change (fond bleu « Electro », fond rose-violet « Nouvelles technologies »).
+ * Les deux gabarits integres partagent la meme mise en page ; seul le cadre
+ * decoratif change (fond bleu « Electro », fond rose-violet « Nouvelles
+ * technologies »). Des gabarits d'operation (ex. « Maison & Beaute a prix
+ * legers ») peuvent etre ajoutes par un administrateur : voir
+ * lib/gabarits-operation.ts.
  */
 
 import type { CategorieProduit } from './constants';
@@ -116,3 +119,92 @@ export const COULEURS = {
   orange: '#ffc000',
   rouge: '#ff0000',
 } as const;
+
+/* -------------------------------------------------------------------------- */
+/* Modeles d'affiche : gabarits integres et gabarits d'operation               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Mise en page du contenu :
+ * - « standard » : celle du modele PowerPoint, pour un cadre dont le macaron
+ *   occupe le coin haut gauche (Electro, Nouvelles technologies) ;
+ * - « macaron-large » : pour un cadre d'operation dont le macaron descend
+ *   jusqu'a ~100 mm (ex. Maison & Beaute) — le logo passe a droite du macaron,
+ *   la designation commence dessous et les pictos sont legerement resserres.
+ */
+export type Disposition = 'standard' | 'macaron-large';
+
+export const LIBELLE_DISPOSITION: Readonly<Record<Disposition, string>> = {
+  standard: 'Standard — petit macaron en haut a gauche',
+  'macaron-large': 'Macaron large — logo a droite, contenu decale vers le bas',
+};
+
+/** Tout ce que le rendu doit savoir du cadre d'une affiche. */
+export interface ModeleAffiche {
+  /** « electro », « nouvelles-technologies » ou « op:<id> ». */
+  readonly code: string;
+  readonly libelle: string;
+  /** Cadre livre avec l'application… */
+  readonly cadreUrl: string | null;
+  /** …ou cadre televerse dans le compartiment « medias ». */
+  readonly cadreFileId: string | null;
+  /** Vrai si le centre du cadre est transparent : il se pose alors au-dessus du contenu. */
+  readonly cadreDessus: boolean;
+  readonly disposition: Disposition;
+}
+
+export const MODELES_INTEGRES: Readonly<Record<Gabarit, ModeleAffiche>> = {
+  electro: {
+    code: 'electro',
+    libelle: GABARITS.electro.libelle,
+    cadreUrl: GABARITS.electro.cadre,
+    cadreFileId: null,
+    cadreDessus: true,
+    disposition: 'standard',
+  },
+  'nouvelles-technologies': {
+    code: 'nouvelles-technologies',
+    libelle: GABARITS['nouvelles-technologies'].libelle,
+    cadreUrl: GABARITS['nouvelles-technologies'].cadre,
+    cadreFileId: null,
+    cadreDessus: true,
+    disposition: 'standard',
+  },
+};
+
+/** Modele retenu : celui impose par la campagne, sinon celui de la categorie. */
+export function resoudreModele(
+  impose: ModeleAffiche | null | undefined,
+  categorie: CategorieProduit | null | undefined,
+): ModeleAffiche {
+  return impose ?? MODELES_INTEGRES[gabaritPourCategorie(categorie)];
+}
+
+/** Jeu complet de zones d'une mise en page. */
+export type Cotes = { readonly [K in keyof typeof COTES]: K extends 'pictos' ? readonly Zone[] : Zone };
+
+/** Cotes de la disposition « macaron-large » (mm). */
+const COTES_MACARON_LARGE: Cotes = {
+  ...COTES,
+  logo: { x: 110, y: 38, l: 80, h: 32 },
+  badge: { x: 150, y: 72, l: 40, h: 20 },
+  designation: { x: 27.6, y: 98, l: 154, h: 13 },
+  reference: { x: 27.6, y: 111, l: 154, h: 12 },
+  pictos: [
+    { x: 19.5, y: 124, l: 30.0, h: 22 },
+    { x: 55.8, y: 124, l: 30.0, h: 22 },
+    { x: 19.5, y: 147, l: 30.0, h: 22 },
+    { x: 55.8, y: 147, l: 30.0, h: 22 },
+    { x: 94.1, y: 147, l: 18.7, h: 22 },
+    { x: 94.1, y: 124, l: 28.4, h: 22 },
+  ],
+  livraison: { x: 120.3, y: 149, l: 51.2, h: 22 },
+  prixBarre: { x: 27.6, y: 170, l: 144.0, h: 15 },
+  blocPrix: { x: 27.6, y: 176, l: 143.5, h: 52 },
+  prixPrincipal: { x: 27.6, y: 187, l: 143.5, h: 40 },
+  economie: { x: 28.0, y: 190, l: 152.0, h: 55 },
+};
+
+export function cotesPour(disposition: Disposition): Cotes {
+  return disposition === 'macaron-large' ? COTES_MACARON_LARGE : COTES;
+}

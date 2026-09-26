@@ -18,6 +18,11 @@ export interface Campagne {
   readonly statut: StatutCampagne;
   readonly createdBy: string;
   readonly creeeLe: string;
+  /**
+   * Gabarit impose a toute la campagne (« electro », « nouvelles-technologies »
+   * ou « op:<id> »), ou null pour le choix automatique selon la categorie.
+   */
+  readonly gabarit: string | null;
 }
 
 export interface Affiche {
@@ -49,6 +54,7 @@ interface LigneCampagne {
   nom: string;
   statut?: StatutCampagne | null;
   createdBy?: string | null;
+  gabarit?: string | null;
 }
 
 interface LigneAffiche {
@@ -70,6 +76,7 @@ const versCampagne = (l: LigneCampagne): Campagne => ({
   statut: l.statut ?? 'brouillon',
   createdBy: l.createdBy ?? '',
   creeeLe: l.$createdAt,
+  gabarit: l.gabarit || null,
 });
 
 const versAffiche = (l: LigneAffiche): Affiche => ({
@@ -141,6 +148,29 @@ export async function changerStatutCampagne(
     data: { statut },
   });
   return versCampagne(ligne as unknown as LigneCampagne);
+}
+
+/**
+ * Enregistre le gabarit de la campagne. Necessite la colonne `gabarit`
+ * (texte, 64 caracteres, facultative) dans la table `campagnes`.
+ */
+export async function changerGabaritCampagne(id: string, gabarit: string | null): Promise<Campagne> {
+  try {
+    const ligne = await tablesDB.updateRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.CAMPAGNES,
+      rowId: id,
+      data: { gabarit: gabarit ?? '' },
+    });
+    return versCampagne(ligne as unknown as LigneCampagne);
+  } catch (erreur) {
+    if (erreur instanceof AppwriteException && /unknown attribute|invalid document structure|colonne|column/i.test(erreur.message)) {
+      throw new Error(
+        "La colonne « gabarit » n'existe pas encore dans la table campagnes : ajoutez-la dans la console Appwrite (texte, 64 caracteres, facultative).",
+      );
+    }
+    throw erreur;
+  }
 }
 
 export async function supprimerCampagne(id: string): Promise<void> {

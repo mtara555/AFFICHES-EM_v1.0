@@ -13,6 +13,7 @@ import {
   messageErreurParametres,
   validerParametres,
 } from '../lib/parametres';
+import { GestionGabarits } from '../components/GestionGabarits';
 import './Parametres.css';
 
 interface LignePalier {
@@ -332,6 +333,8 @@ export function Parametres() {
           )}
         </section>
       </div>
+
+      <GestionGabarits />
     </AppShell>
   );
 }

@@ -7,6 +7,7 @@ import { Reduction } from '../components/affiche/Reduction';
 import { trouverParEan, type Article } from '../lib/articles';
 import { listerMarques, type Marque } from '../lib/marques';
 import {
+  changerGabaritCampagne,
   changerStatutCampagne,
   listerAffiches,
   messageErreurCampagne,
@@ -18,10 +19,15 @@ import { chargerParametres, PARAMETRES_DEFAUT, type ParametresRegles } from '../
 import { depuisAffiche, type DonneesAffiche } from '../lib/affiche-rendu';
 import { attendreRenduComplet } from '../lib/medias';
 import { FORMATS, FORMATS_ORDONNES, type FormatAffiche } from '../config/constants';
-import { GABARITS, GABARITS_ORDONNES, type Gabarit } from '../config/gabarits';
+import { GABARITS, GABARITS_ORDONNES } from '../config/gabarits';
+import {
+  listerGabaritsOperation,
+  modeleDepuisChoix,
+  PREFIXE_OPERATION,
+  type GabaritOperation,
+} from '../lib/gabarits-operation';
 import './Impression.css';
 
-type ChoixGabarit = 'auto' | Gabarit;
 
 interface PlancheCalculee {
   readonly cle: string;
@@ -61,7 +67,9 @@ export function Impression() {
 
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [choixGabarit, setChoixGabarit] = useState<ChoixGabarit>('auto');
+  const [choixGabarit, setChoixGabarit] = useState<string>('auto');
+  const [operations, setOperations] = useState<GabaritOperation[]>([]);
+  const [messageGabarit, setMessageGabarit] = useState<string | null>(null);
   const [zoom, setZoom] = useState(0.5);
   const [preparation, setPreparation] = useState(false);
 
@@ -70,13 +78,16 @@ export function Impression() {
     setChargement(true);
     setErreur(null);
     try {
-      const [c, a, m, p] = await Promise.all([
+      const [c, a, m, p, ops] = await Promise.all([
         obtenirCampagne(campagneId),
         listerAffiches(campagneId),
         listerMarques(),
         chargerParametres(),
+        listerGabaritsOperation(),
       ]);
       setCampagne(c);
+      setOperations(ops);
+      setChoixGabarit(c.gabarit ?? 'auto');
       setAffiches(a);
       setMarques(new Map(m.map((marque) => [marque.id, marque])));
       setParametres(p);
@@ -91,6 +102,25 @@ export function Impression() {
   useEffect(() => {
     void charger();
   }, [charger]);
+
+  const modeleImpose = useMemo(
+    () => modeleDepuisChoix(choixGabarit, operations),
+    [choixGabarit, operations],
+  );
+
+  /** Enregistre le choix sur la campagne : il vaut pour tous les utilisateurs. */
+  async function choisirGabarit(valeur: string) {
+    setChoixGabarit(valeur);
+    setMessageGabarit(null);
+    if (!campagne) return;
+    try {
+      setCampagne(await changerGabaritCampagne(campagne.id, valeur === 'auto' ? null : valeur));
+    } catch (probleme) {
+      setMessageGabarit(
+        `${messageErreurCampagne(probleme)} Le gabarit est applique pour cette impression seulement.`,
+      );
+    }
+  }
 
   /** Donnees pretes a rendre, et lignes ecartees faute de fiche article. */
   const { donnees, introuvables } = useMemo(() => {
@@ -109,12 +139,12 @@ export function Impression() {
           article,
           marques.get(article.marqueId),
           parametres,
-          choixGabarit === 'auto' ? null : choixGabarit,
+          modeleImpose,
         ),
       });
     }
     return { donnees: prets, introuvables: manquants };
-  }, [affiches, articles, marques, parametres, choixGabarit]);
+  }, [affiches, articles, marques, parametres, modeleImpose]);
 
   const planches = useMemo<PlancheCalculee[]>(() => {
     const resultat: PlancheCalculee[] = [];
@@ -202,15 +232,25 @@ export function Impression() {
           <select
             id="gabarit"
             value={choixGabarit}
-            onChange={(e) => setChoixGabarit(e.target.value as ChoixGabarit)}
+            onChange={(e) => void choisirGabarit(e.target.value)}
           >
-            <option value="auto">Automatique (selon la categorie)</option>
+            <option value="auto">Automatique : Electro ou Image &amp; Son selon l&apos;article</option>
             {GABARITS_ORDONNES.map((g) => (
               <option key={g} value={g}>
                 {GABARITS[g].libelle} — toutes les affiches
               </option>
             ))}
+            {operations.length > 0 ? (
+              <optgroup label="Operations">
+                {operations.map((o) => (
+                  <option key={o.id} value={`${PREFIXE_OPERATION}${o.id}`}>
+                    {o.nom}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
           </select>
+          {messageGabarit ? <span className="champ__aide champ__aide--alerte">{messageGabarit}</span> : null}
         </div>
 
         <div className="champ">

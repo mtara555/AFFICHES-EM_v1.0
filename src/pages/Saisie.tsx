@@ -24,6 +24,7 @@ import { FORMATS, FORMATS_ORDONNES, type FormatAffiche } from '../config/constan
 import { AfficheA4 } from '../components/affiche/AfficheA4';
 import { ImportSaisie } from '../components/ImportSaisie';
 import { ScannerCodeBarre } from '../components/ScannerCodeBarre';
+import { listerGabaritsOperation, modeleDepuisChoix, type GabaritOperation } from '../lib/gabarits-operation';
 import { Reduction } from '../components/affiche/Reduction';
 import { preparerDonnees } from '../lib/affiche-rendu';
 import './Saisie.css';
@@ -52,6 +53,7 @@ export function Saisie() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [ajout, setAjout] = useState(false);
   const champEan = useRef<HTMLInputElement>(null);
+  const [operations, setOperations] = useState<GabaritOperation[]>([]);
   const champPrixBarre = useRef<HTMLInputElement>(null);
   const [scanner, setScanner] = useState(false);
   const cameraDisponible =
@@ -68,16 +70,18 @@ export function Saisie() {
     if (!campagneId) return;
     setErreur(null);
     try {
-      const [c, a, m, p] = await Promise.all([
+      const [c, a, m, p, ops] = await Promise.all([
         obtenirCampagne(campagneId),
         listerAffiches(campagneId),
         listerMarques(),
         chargerParametres(),
+        listerGabaritsOperation(),
       ]);
       setCampagne(c);
       setAffiches(a);
       setMarques(m);
       setParametres(p);
+      setOperations(ops);
     } catch (probleme) {
       setErreur(messageErreurCampagne(probleme));
     }
@@ -121,10 +125,11 @@ export function Saisie() {
         nouveaute,
         stockLimite,
         promotion,
+        modele: modeleDepuisChoix(campagne?.gabarit, operations),
       },
       parametres,
     );
-  }, [article, marques, prixBarre, prixPrincipal, nouveaute, stockLimite, promotion, parametres]);
+  }, [article, marques, prixBarre, prixPrincipal, nouveaute, stockLimite, promotion, parametres, campagne, operations]);
 
   const regles = useMemo(
     () =>

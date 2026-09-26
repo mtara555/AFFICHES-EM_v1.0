@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { COTES, GABARITS, VISUELS, type Zone } from '../../config/gabarits';
+import { cotesPour, VISUELS, type ModeleAffiche, type Zone } from '../../config/gabarits';
 import { decouperMontant, type DonneesAffiche } from '../../lib/affiche-rendu';
 import { formaterMontant } from '../../lib/regles';
 import { Visuel } from './Visuel';
@@ -34,7 +34,8 @@ interface AfficheA4Props {
  */
 export function AfficheA4({ donnees }: AfficheA4Props) {
   const { regles } = donnees;
-  const gabarit = GABARITS[donnees.gabarit];
+  const { modele } = donnees;
+  const COTES = cotesPour(modele.disposition);
   const principal = decouperMontant(donnees.prixPrincipal);
   const barre = decouperMontant(donnees.prixBarre);
   const mensualite = regles.mensualite !== null ? decouperMontant(regles.mensualite) : null;
@@ -45,7 +46,13 @@ export function AfficheA4({ donnees }: AfficheA4Props) {
   ].filter((b): b is string => b !== null);
 
   return (
-    <article className={`affiche affiche--${donnees.gabarit}`} aria-label={donnees.designation}>
+    <article
+      className={`affiche affiche--${modele.code.replace(/[^a-z0-9-]/gi, '-')} affiche--${modele.disposition}`}
+      aria-label={donnees.designation}
+    >
+      {/* Cadre opaque (JPEG, fond blanc) : sous le contenu. */}
+      {!modele.cadreDessus ? <Cadre modele={modele} dessous /> : null}
+
       {/* Bandeau economie : sous le bloc prix, seule sa partie basse depasse. */}
       {regles.afficherEconomie ? (
         <div className="affiche__economie" style={zone(COTES.economie)} />
@@ -177,7 +184,17 @@ export function AfficheA4({ donnees }: AfficheA4Props) {
         </>
       ) : null}
 
-      <img className="affiche__cadre" src={gabarit.cadre} alt="" aria-hidden="true" />
+      {/* Cadre a centre transparent : au-dessus, comme l'Image 12 du modele PowerPoint. */}
+      {modele.cadreDessus ? <Cadre modele={modele} /> : null}
     </article>
   );
+}
+
+/** Cadre decoratif : fichier livre avec l'application ou image televersee. */
+function Cadre({ modele, dessous = false }: { modele: ModeleAffiche; dessous?: boolean }) {
+  const classe = dessous ? 'affiche__cadre affiche__cadre--dessous' : 'affiche__cadre';
+  if (modele.cadreUrl) {
+    return <img className={classe} src={modele.cadreUrl} alt="" aria-hidden="true" />;
+  }
+  return <Visuel fileId={modele.cadreFileId} alt="" className={classe} secours={null} />;
 }
