@@ -1,6 +1,7 @@
 import { idPictogramme } from '../../lib/appwrite';
 import { Visuel } from './Visuel';
 import { TexteAjuste } from './TexteAjuste';
+import { PictoVectoriel, reconnaitre } from './PictoVectoriel';
 
 interface PictogrammeProps {
   readonly code: string;
@@ -17,7 +18,8 @@ function dureeGarantie(code: string): number | null {
  *
  * Le visuel televerse (`picto_<CODE>`) est prioritaire. A defaut, un rendu
  * vectoriel reprend la charte du kit PLV : cartouche rouge pour la garantie,
- * hexagone jaune pour toute autre caracteristique. L'affiche reste donc
+ * dessins dedies (tours, kg, USB, HDMI, 4K, Wi-Fi, TNT, HDR, HD) et hexagone
+ * jaune avec le texte du code pour toute autre caracteristique. L'affiche reste donc
  * exploitable meme avant que la bibliotheque de pictogrammes soit complete.
  */
 export function Pictogramme({ code }: PictogrammeProps) {
@@ -69,6 +71,9 @@ function PictogrammeSecours({ code }: PictogrammeProps) {
       </svg>
     );
   }
+
+  const modele = reconnaitre(code);
+  if (modele) return <PictoVectoriel modele={modele} />;
 
   return (
     <div className="affiche__hexagone">
