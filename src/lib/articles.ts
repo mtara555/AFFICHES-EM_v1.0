@@ -168,6 +168,27 @@ export async function trouverParEan(ean: string): Promise<Article | null> {
   return premiere ? versArticle(premiere) : null;
 }
 
+/**
+ * Tous les codes deja presents au catalogue, lus par pages de 500 et reduits a
+ * la seule colonne `ean`. Sert a l'import pour ne pas renvoyer a Appwrite des
+ * articles qu'il refuserait de toute facon.
+ */
+export async function listerTousLesCodes(): Promise<Set<string>> {
+  const codes = new Set<string>();
+  const PAGE = 500;
+  for (let offset = 0; ; offset += PAGE) {
+    const reponse = await tablesDB.listRows({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.ARTICLES,
+      queries: [Query.select(['ean']), Query.limit(PAGE), Query.offset(offset)],
+    });
+    const lignes = reponse.rows as unknown as { ean: string }[];
+    lignes.forEach((l) => codes.add(l.ean));
+    if (lignes.length < PAGE || codes.size >= reponse.total) break;
+  }
+  return codes;
+}
+
 export async function creerArticle(saisie: SaisieArticle): Promise<Article> {
   const ligne = await tablesDB.createRow({
     databaseId: DATABASE_ID,

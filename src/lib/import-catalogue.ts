@@ -139,6 +139,18 @@ export function deduireCategorie(designation: string): CategorieProduit | null {
 /* Lecture du fichier                                                          */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Texte d'une cellule lue en valeur brute. Un nombre entier redevient une
+ * suite de chiffres complete (6942351415628), jamais « 6.94235E+12 ».
+ */
+function texteCellule(valeur: unknown): string {
+  if (valeur === null || valeur === undefined) return '';
+  if (typeof valeur === 'number') {
+    return Number.isInteger(valeur) ? valeur.toFixed(0) : String(valeur);
+  }
+  return String(valeur).trim();
+}
+
 /** Une ligne brute du fichier, colonnes A a J dans l'ordre du classeur. */
 interface LigneBrute {
   readonly numero: number;
@@ -165,10 +177,13 @@ export function lireClasseur(donnees: ArrayBuffer): LigneBrute[] {
   const feuille = classeur.Sheets[premiereFeuille];
   if (!feuille) return [];
 
+  // Valeurs brutes : avec le texte affiche (raw: false), Excel rend les codes
+  // longs au format « Standard » en notation scientifique (8.8061E+12), et
+  // plusieurs articles differents se retrouvaient avec le meme code.
   const matrice = XLSX.utils.sheet_to_json<unknown[]>(feuille, {
     header: 1,
     defval: '',
-    raw: false,
+    raw: true,
   });
 
   const lignes: LigneBrute[] = [];
@@ -178,16 +193,16 @@ export function lireClasseur(donnees: ArrayBuffer): LigneBrute[] {
     const cellules = matrice[i];
     if (!cellules) continue;
 
-    const code = String(cellules[0] ?? '').trim();
+    const code = texteCellule(cellules[0]);
     if (!code) continue;
 
     lignes.push({
       numero: i + 1,
       code,
-      marque: normaliserCode(cellules[1]),
-      designation: normaliserLibelle(cellules[2]),
-      reference: String(cellules[3] ?? '').trim(),
-      pictos: [4, 5, 6, 7, 8, 9].map((colonne) => normaliserCode(cellules[colonne])),
+      marque: normaliserCode(texteCellule(cellules[1])),
+      designation: normaliserLibelle(texteCellule(cellules[2])),
+      reference: texteCellule(cellules[3]),
+      pictos: [4, 5, 6, 7, 8, 9].map((colonne) => normaliserCode(texteCellule(cellules[colonne]))),
     });
   }
 

@@ -141,3 +141,16 @@
   gap: var(--space-5);
   margin-bottom: var(--space-5);
 }
+
+.import-suivi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.import-suivi .champ__aide {
+  margin: 0;
+}

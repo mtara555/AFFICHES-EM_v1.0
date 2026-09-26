@@ -1,12 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppShell } from '../components/AppShell';
 import { listerMarques, type Marque } from '../lib/marques';
-import { creerArticle, messageErreurArticle } from '../lib/articles';
+import { AppwriteException } from 'appwrite';
+import { creerArticle, listerTousLesCodes, messageErreurArticle } from '../lib/articles';
 import { analyser, lireClasseur, type Analyse } from '../lib/import-catalogue';
 import { CATEGORIES, type CategorieProduit } from '../config/constants';
 import './ImportCatalogue.css';
 
-type Progression = { traites: number; total: number; crees: number; ignores: number };
+type Progression = {
+  traites: number;
+  total: number;
+  crees: number;
+  ignores: number;
+  /** Secondes restantes avant reprise, pendant une pause imposee par Appwrite. */
+  pause: number;
+  etape: 'verification' | 'envoi';
+};
+
+/**
+ * Cadence d'envoi. Appwrite Cloud limite le nombre de creations par minute et
+ * par utilisateur : au-dela, il repond « 429 Too many requests » et la ligne
+ * est refusee. On reste donc sous la limite (environ 110 par minute), et une
+ * ligne refusee pour ce motif est renvoyee apres une pause, jamais perdue.
+ */
+const INTERVALLE_MS = 550;
+const PAUSES_S = [15, 30, 60, 60, 60];
+
+const attendre = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const estLimite = (e: unknown) => e instanceof AppwriteException && e.code === 429;
 
 export function ImportCatalogue() {
   const [marques, setMarques] = useState<Marque[]>([]);
@@ -19,6 +40,7 @@ export function ImportCatalogue() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [termine, setTermine] = useState(false);
   const champFichier = useRef<HTMLInputElement>(null);
+  const arret = useRef(false);
 
   useEffect(() => {
     listerMarques()
@@ -55,34 +77,76 @@ export function ImportCatalogue() {
     const aTraiter = limite === null ? analyse.pretes : analyse.pretes.slice(0, limite);
     const confirme = window.confirm(
       `Importer ${aTraiter.length} article(s) dans le catalogue ?\n\n` +
-        'Les articles dont le code existe deja seront ignores.',
+        'Les articles dont le code existe deja seront ignores.\n' +
+        'Gardez cette page ouverte jusqu\'a la fin.',
     );
     if (!confirme) return;
 
     setErreur(null);
     setErreurs([]);
     setTermine(false);
+    arret.current = false;
 
     let crees = 0;
     let ignores = 0;
     const echecs: { ligne: number; message: string }[] = [];
+    const maj = (traites: number, total: number, pause = 0, etape: Progression['etape'] = 'envoi') =>
+      setProgression({ traites, total, crees, ignores, pause, etape });
 
-    for (const [index, ligne] of aTraiter.entries()) {
-      try {
-        await creerArticle(ligne.saisie);
-        crees += 1;
-      } catch (probleme) {
-        const message = messageErreurArticle(probleme);
-        // Un code deja present n'est pas un echec : l'import reste relançable.
-        if (message.includes('deja ce code')) ignores += 1;
-        else echecs.push({ ligne: ligne.numero, message });
+    // L'ecran reste allume pendant l'import (si le navigateur le permet).
+    let verrou: { release: () => Promise<void> } | null = null;
+    try {
+      verrou = await (navigator as unknown as {
+        wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> };
+      }).wakeLock?.request('screen') ?? null;
+    } catch {
+      /* non disponible */
+    }
+
+    try {
+      // 1. Codes deja presents : ignores sans interroger Appwrite ligne par ligne.
+      maj(0, aTraiter.length, 0, 'verification');
+      const existants = await listerTousLesCodes();
+      const nouveaux = aTraiter.filter((l) => !existants.has(l.saisie.ean));
+      ignores = aTraiter.length - nouveaux.length;
+
+      // 2. Envoi a cadence reguliere, avec reprise apres une limite atteinte.
+      for (const [index, ligne] of nouveaux.entries()) {
+        if (arret.current) break;
+        for (let tentative = 0; ; tentative++) {
+          try {
+            await creerArticle(ligne.saisie);
+            crees += 1;
+            break;
+          } catch (probleme) {
+            if (estLimite(probleme) && tentative < PAUSES_S.length && !arret.current) {
+              for (let s = PAUSES_S[tentative]!; s > 0 && !arret.current; s--) {
+                maj(ignores + index, aTraiter.length, s);
+                await attendre(1000);
+              }
+              continue;
+            }
+            const message = messageErreurArticle(probleme);
+            if (message.includes('deja ce code')) ignores += 1;
+            else echecs.push({ ligne: ligne.numero, message });
+            break;
+          }
+        }
+        maj(ignores + index + 1, aTraiter.length);
+        await attendre(INTERVALLE_MS);
       }
-      setProgression({ traites: index + 1, total: aTraiter.length, crees, ignores });
+    } catch (probleme) {
+      setErreur(messageErreurArticle(probleme));
+    } finally {
+      await verrou?.release().catch(() => undefined);
     }
 
     setErreurs(echecs);
     setProgression(null);
     setTermine(true);
+    if (arret.current) {
+      setErreur(`Import interrompu : ${crees} article(s) cree(s). Relancez-le pour continuer, les articles deja crees seront ignores.`);
+    }
   }
 
   const nbAImporter = analyse
@@ -295,9 +359,33 @@ export function ImportCatalogue() {
                   style={{ width: `${(progression.traites / progression.total) * 100}%` }}
                 />
                 <span className="progression__texte">
-                  {progression.traites} / {progression.total} — {progression.crees} cree(s)
-                  {progression.ignores > 0 ? `, ${progression.ignores} ignore(s)` : ''}
+                  {progression.etape === 'verification'
+                    ? 'Verification des codes deja presents…'
+                    : `${progression.traites} / ${progression.total} — ${progression.crees} cree(s)${
+                        progression.ignores > 0 ? `, ${progression.ignores} deja present(s)` : ''
+                      }`}
                 </span>
+              </div>
+            ) : null}
+            {progression ? (
+              <div className="import-suivi">
+                <p className="champ__aide">
+                  {progression.pause > 0
+                    ? `Limite d'envoi Appwrite atteinte : reprise automatique dans ${progression.pause} s. Aucune ligne n'est perdue.`
+                    : `Temps restant estime : ${Math.max(
+                        1,
+                        Math.ceil(((progression.total - progression.traites) * (INTERVALLE_MS + 250)) / 60000),
+                      )} min. Gardez cette page ouverte.`}
+                </p>
+                <button
+                  type="button"
+                  className="bouton bouton--discret bouton--petit"
+                  onClick={() => {
+                    arret.current = true;
+                  }}
+                >
+                  Arreter
+                </button>
               </div>
             ) : (
               <button
@@ -313,7 +401,9 @@ export function ImportCatalogue() {
             {termine ? (
               <p className="bandeau bandeau--succes" style={{ marginTop: 'var(--space-4)' }}>
                 Import termine.
-                {erreurs.length > 0 ? ` ${erreurs.length} ligne(s) en echec.` : ''}
+                {erreurs.length > 0
+                  ? ` ${erreurs.length} ligne(s) en echec, detail ci-dessous.`
+                  : ' Tous les articles du fichier sont au catalogue.'}
               </p>
             ) : null}
 
@@ -321,7 +411,7 @@ export function ImportCatalogue() {
               <details className="detail detail--alerte">
                 <summary>{erreurs.length} echec(s)</summary>
                 <ul className="liste-detail">
-                  {erreurs.slice(0, 20).map((e, i) => (
+                  {erreurs.slice(0, 200).map((e, i) => (
                     <li key={i}>
                       Ligne {e.ligne} — {e.message}
                     </li>
