@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
  * Pictogrammes vectoriels du kit PLV Electro, dessines a partir du code saisi
  * dans le catalogue : « 1200T », « 7KG », « 3USB », « 4HDMI », « 4KUHD »,
  * « WIFI », « TNTHD », « HDR10+ », « ULTRAHD », « FULLHD », « HD »,
- * et la taille d'ecran « 75" » (ou « 75 POUCES », « 75PO », « 75IN »).
+ * et la taille d'ecran « 75" » (ou « 75P », « 75 POUCES », « 75PO », « 75IN »).
  *
  * Toutes les variantes chiffrees (1000T, 1400T, 8KG, 9KG, 1 a 5 USB…) sont
  * produites par le meme dessin : aucun fichier image n'est a preparer.
@@ -37,9 +37,9 @@ export function reconnaitre(code: string): Modele | null {
   const c = code.toUpperCase().replace(/[\s_.-]/g, '');
   let m: RegExpExecArray | null;
 
-  // Taille d'ecran : 75", 75'', 75″, 75 POUCES, 75PO, 75IN, 75INCH, 65"...
+  // Taille d'ecran : 75", 75'', 75″, 75P, 75 POUCES, 75PO, 75IN, 75INCH, 65"...
   const e = code.toUpperCase().replace(/\s/g, '').replace(/[“”″]/g, '"').replace(/''/g, '"');
-  if ((m = /^(\d{2,3}(?:[,.]\d)?)("|POUCES?|PO|IN|INCH|INCHES)$/.exec(e))) {
+  if ((m = /^(\d{2,3}(?:[,.]\d)?)("|POUCES?|PO|P|IN|INCH|INCHES|POUCE)$/.exec(e))) {
     return { type: 'ecran', pouces: m[1]!.replace('.', ',') };
   }
 
