@@ -228,3 +228,73 @@ a.bouton {
   align-items: center;
   text-decoration: none;
 }
+
+/* --------------------------------------------------------------------------
+   Logos
+   -------------------------------------------------------------------------- */
+
+.cellule-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.vignette-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 40px;
+  padding: 3px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  flex: none;
+  overflow: hidden;
+}
+
+.vignette-logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.vignette-logo__vide {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+label.bouton {
+  cursor: pointer;
+}
+
+label.bouton.est-desactive {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+label.bouton:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.tableau--lot select {
+  max-width: 220px;
+  padding: 5px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--text-sm);
+  background: var(--surface);
+}
+
+.colonne-fichier {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  word-break: break-all;
+}
+
+.tableau-defilant {
+  overflow-x: auto;
+}

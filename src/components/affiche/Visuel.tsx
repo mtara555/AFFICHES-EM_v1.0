@@ -8,6 +8,8 @@ interface VisuelProps {
   readonly className?: string;
   /** Rendu utilise tant que le fichier n'est pas disponible, ou s'il n'existe pas. */
   readonly secours: ReactNode;
+  /** A changer pour recharger le fichier apres un remplacement (meme identifiant). */
+  readonly version?: number;
 }
 
 /**
@@ -17,7 +19,7 @@ interface VisuelProps {
  * ou le pictogramme n'a pas encore ete televerse, un equivalent typographique
  * prend sa place.
  */
-export function Visuel({ fileId, alt, className, secours }: VisuelProps) {
+export function Visuel({ fileId, alt, className, secours, version = 0 }: VisuelProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [echec, setEchec] = useState(false);
 
@@ -37,7 +39,7 @@ export function Visuel({ fileId, alt, className, secours }: VisuelProps) {
     return () => {
       actif = false;
     };
-  }, [fileId]);
+  }, [fileId, version]);
 
   if (url && !echec) {
     return <img className={className} src={url} alt={alt} onError={() => setEchec(true)} />;

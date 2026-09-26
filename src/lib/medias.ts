@@ -30,7 +30,9 @@ async function telecharger(fileId: string): Promise<string | null> {
     } catch {
       /* stockage local indisponible : la session par cookie suffira */
     }
-    const reponse = await fetch(url, { credentials: 'include', headers: entetes });
+    // « no-cache » : le navigateur revalide aupres d'Appwrite, pour qu'un logo
+    // remplace sous le meme identifiant ne reste pas affiche dans son ancienne version.
+    const reponse = await fetch(url, { credentials: 'include', headers: entetes, cache: 'no-cache' });
     if (!reponse.ok) return null;
     const contenu = await reponse.blob();
     if (!contenu.type.startsWith('image/')) return null;
@@ -50,6 +52,16 @@ export function chargerMedia(fileId: string): Promise<string | null> {
   enCours.add(promesse);
   void promesse.finally(() => enCours.delete(promesse));
   return promesse;
+}
+
+/**
+ * Retire un fichier du cache, apres son remplacement ou sa suppression : le
+ * prochain affichage ira chercher la nouvelle version.
+ */
+export function oublierMedia(fileId: string): void {
+  // L'ancienne URL n'est pas revoquee : une image encore affichee l'utilise
+  // peut-etre. Le navigateur la liberera a la fermeture de la page.
+  cache.delete(fileId);
 }
 
 /** Resout quand tous les telechargements lances sont termines. */

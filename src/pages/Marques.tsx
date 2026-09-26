@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Visuel } from '../components/affiche/Visuel';
 import { AppShell } from '../components/AppShell';
 import {
   creerMarque,
@@ -9,6 +10,14 @@ import {
   supprimerMarque,
   type Marque,
 } from '../lib/marques';
+import {
+  ACCEPT_LOGO,
+  messageErreurLogo,
+  rapprocher,
+  supprimerLogo,
+  televerserLogo,
+  type Rapprochement,
+} from '../lib/logos';
 import { MARQUES_CATALOGUE } from '../config/marques-catalogue';
 import './Marques.css';
 
@@ -28,6 +37,24 @@ export function Marques() {
   const [importEnCours, setImportEnCours] = useState<{ traites: number; total: number } | null>(
     null,
   );
+
+  /* --- Logos ------------------------------------------------------------ */
+  const [versions, setVersions] = useState<Record<string, number>>({});
+  const [logoEnCours, setLogoEnCours] = useState<string | null>(null);
+  const [lot, setLot] = useState<Rapprochement[] | null>(null);
+  const [lotProgression, setLotProgression] = useState<{ faits: number; total: number } | null>(
+    null,
+  );
+
+  /** Apercus locaux des fichiers du lot, liberes quand le lot change. */
+  const apercusLot = useMemo(
+    () => (lot ? lot.map((r) => URL.createObjectURL(r.fichier)) : []),
+    [lot],
+  );
+  useEffect(() => () => apercusLot.forEach((u) => URL.revokeObjectURL(u)), [apercusLot]);
+
+  const incrementerVersion = (id: string) =>
+    setVersions((v) => ({ ...v, [id]: (v[id] ?? 0) + 1 }));
 
   const recharger = useCallback(async () => {
     setChargement(true);
@@ -135,6 +162,81 @@ export function Marques() {
     }
   }
 
+  async function changerLogo(marque: Marque, fichier: File | undefined) {
+    if (!fichier) return;
+    setErreur(null);
+    setMessage(null);
+    setLogoEnCours(marque.id);
+    try {
+      await televerserLogo(marque, fichier);
+      incrementerVersion(marque.id);
+      setMessage(`Logo de « ${marque.nom} » enregistre.`);
+      await recharger();
+    } catch (probleme) {
+      setErreur(`${marque.nom} : ${messageErreurLogo(probleme)}`);
+    } finally {
+      setLogoEnCours(null);
+    }
+  }
+
+  async function retirerLogo(marque: Marque) {
+    if (!window.confirm(`Retirer le logo de « ${marque.nom} » ?`)) return;
+    setErreur(null);
+    setMessage(null);
+    setLogoEnCours(marque.id);
+    try {
+      await supprimerLogo(marque);
+      incrementerVersion(marque.id);
+      setMessage(`Logo de « ${marque.nom} » retire. Le nom de la marque s'affichera a sa place.`);
+      await recharger();
+    } catch (probleme) {
+      setErreur(`${marque.nom} : ${messageErreurLogo(probleme)}`);
+    } finally {
+      setLogoEnCours(null);
+    }
+  }
+
+  function preparerLot(fichiers: FileList | null) {
+    if (!fichiers || fichiers.length === 0) return;
+    setErreur(null);
+    setMessage(null);
+    setLot(rapprocher(Array.from(fichiers), marques));
+  }
+
+  function choisirMarqueLot(index: number, marqueId: string) {
+    setLot((l) =>
+      l ? l.map((r, i) => (i === index ? { ...r, marqueId: marqueId || null } : r)) : l,
+    );
+  }
+
+  const lotValide = (lot ?? []).filter((r) => r.marqueId && !r.probleme);
+
+  async function envoyerLot() {
+    if (!lot) return;
+    const aEnvoyer = lotValide;
+    const echecs: string[] = [];
+    setErreur(null);
+    setMessage(null);
+    setLotProgression({ faits: 0, total: aEnvoyer.length });
+    for (const [i, r] of aEnvoyer.entries()) {
+      const marque = marques.find((m) => m.id === r.marqueId);
+      if (marque) {
+        try {
+          await televerserLogo(marque, r.fichier);
+          incrementerVersion(marque.id);
+        } catch (probleme) {
+          echecs.push(`${r.fichier.name} (${messageErreurLogo(probleme)})`);
+        }
+      }
+      setLotProgression({ faits: i + 1, total: aEnvoyer.length });
+    }
+    setLotProgression(null);
+    setLot(null);
+    setMessage(`${aEnvoyer.length - echecs.length} logo(s) enregistre(s).`);
+    if (echecs.length > 0) setErreur(`Echecs : ${echecs.join(' ; ')}`);
+    await recharger();
+  }
+
   const actives = marques.filter((m) => m.actif).length;
 
   return (
@@ -160,7 +262,7 @@ export function Marques() {
           <h2 className="carte__titre">Import du catalogue existant</h2>
           <p className="carte__texte">
             {manquantes.length} marque(s) du fichier <code>BD-EM-1108.xlsx</code> ne sont pas
-            encore enregistrees. Les logos pourront etre ajoutes ensuite, marque par marque.
+            encore enregistrees. Les logos pourront etre ajoutes ensuite, en lot ou marque par marque.
           </p>
           {importEnCours ? (
             <div className="progression">
@@ -176,6 +278,131 @@ export function Marques() {
             <button type="button" className="bouton bouton--principal" onClick={importerCatalogue}>
               Importer {manquantes.length} marque(s)
             </button>
+          )}
+        </section>
+      ) : null}
+
+      {!chargement && marques.length > 0 ? (
+        <section className="carte">
+          <div className="carte__entete">
+            <h2 className="carte__titre">Logos en lot</h2>
+            {!lot ? (
+              <label className="bouton bouton--principal">
+                Choisir des fichiers…
+                <input
+                  type="file"
+                  accept={ACCEPT_LOGO}
+                  multiple
+                  className="visually-hidden"
+                  onChange={(e) => {
+                    preparerLot(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            ) : null}
+          </div>
+
+          {!lot ? (
+            <p className="carte__texte">
+              Selectionnez plusieurs logos a la fois (Ctrl + A dans le dossier). Chaque fichier est
+              associe a la marque de meme nom : <code>SAMSUNG.jpg</code>, <code>Beko logo.png</code>{' '}
+              ou <code>arthur-martin.png</code> sont reconnus. Vous pourrez corriger avant
+              l&apos;envoi. Formats PNG, JPG, WEBP ou SVG ; fond blanc ou transparent conseille.
+            </p>
+          ) : (
+            <>
+              <p className="carte__texte">
+                {lotValide.length} fichier(s) pret(s) sur {lot.length}.
+                {lot.some((r) => !r.marqueId)
+                  ? ' Choisissez la marque des fichiers non reconnus, ou laissez « Ignorer ».'
+                  : ''}
+              </p>
+              <div className="tableau-defilant">
+                <table className="tableau tableau--lot">
+                  <thead>
+                    <tr>
+                      <th scope="col">Apercu</th>
+                      <th scope="col">Fichier</th>
+                      <th scope="col">Marque</th>
+                      <th scope="col">Etat</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lot.map((r, i) => {
+                      const cible = marques.find((m) => m.id === r.marqueId);
+                      return (
+                        <tr key={`${r.fichier.name}-${i}`}>
+                          <td>
+                            <span className="vignette-logo">
+                              <img src={apercusLot[i]} alt="" />
+                            </span>
+                          </td>
+                          <td className="colonne-fichier">{r.fichier.name}</td>
+                          <td>
+                            <select
+                              id={`lot-marque-${i}`}
+                              aria-label={`Marque pour ${r.fichier.name}`}
+                              value={r.marqueId ?? ''}
+                              onChange={(e) => choisirMarqueLot(i, e.target.value)}
+                              disabled={lotProgression !== null}
+                            >
+                              <option value="">— Ignorer —</option>
+                              {marques.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.nom}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            {r.probleme ? (
+                              <span className="etiquette etiquette--inactive">{r.probleme}</span>
+                            ) : !r.marqueId ? (
+                              <span className="etiquette">Ignore</span>
+                            ) : cible?.logoFileId ? (
+                              <span className="etiquette">Remplacera le logo actuel</span>
+                            ) : (
+                              <span className="etiquette etiquette--ok">Nouveau logo</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {lotProgression ? (
+                <div className="progression">
+                  <div
+                    className="progression__barre"
+                    style={{ width: `${(lotProgression.faits / lotProgression.total) * 100}%` }}
+                  />
+                  <span className="progression__texte">
+                    {lotProgression.faits} / {lotProgression.total}
+                  </span>
+                </div>
+              ) : (
+                <div className="actions-formulaire">
+                  <button
+                    type="button"
+                    className="bouton bouton--principal"
+                    onClick={() => void envoyerLot()}
+                    disabled={lotValide.length === 0}
+                  >
+                    Televerser {lotValide.length} logo(s)
+                  </button>
+                  <button
+                    type="button"
+                    className="bouton bouton--discret"
+                    onClick={() => setLot(null)}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
       ) : null}
@@ -268,11 +495,51 @@ export function Marques() {
                 <tr key={marque.id} className={edition.id === marque.id ? 'est-editee' : undefined}>
                   <th scope="row">{marque.nom}</th>
                   <td>
-                    {marque.logoFileId ? (
-                      <span className="etiquette etiquette--ok">Present</span>
-                    ) : (
-                      <span className="etiquette">A fournir</span>
-                    )}
+                    <div className="cellule-logo">
+                      <span className="vignette-logo">
+                        {marque.logoFileId ? (
+                          <Visuel
+                            fileId={marque.logoFileId}
+                            version={versions[marque.id] ?? 0}
+                            alt={`Logo ${marque.nom}`}
+                            secours={<span className="vignette-logo__vide">…</span>}
+                          />
+                        ) : (
+                          <span className="vignette-logo__vide">A fournir</span>
+                        )}
+                      </span>
+                      <label
+                        className={`bouton bouton--discret bouton--petit${
+                          logoEnCours === marque.id ? ' est-desactive' : ''
+                        }`}
+                      >
+                        {logoEnCours === marque.id
+                          ? 'Envoi…'
+                          : marque.logoFileId
+                            ? 'Remplacer'
+                            : 'Televerser'}
+                        <input
+                          type="file"
+                          accept={ACCEPT_LOGO}
+                          className="visually-hidden"
+                          disabled={logoEnCours !== null}
+                          onChange={(e) => {
+                            void changerLogo(marque, e.target.files?.[0]);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                      {marque.logoFileId ? (
+                        <button
+                          type="button"
+                          className="bouton bouton--discret bouton--petit"
+                          onClick={() => void retirerLogo(marque)}
+                          disabled={logoEnCours !== null}
+                        >
+                          Retirer
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                   <td>
                     {marque.actif ? (
