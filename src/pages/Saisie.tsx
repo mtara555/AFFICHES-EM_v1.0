@@ -22,6 +22,7 @@ import {
 } from '../lib/regles';
 import { FORMATS, FORMATS_ORDONNES, type FormatAffiche } from '../config/constants';
 import { AfficheA4 } from '../components/affiche/AfficheA4';
+import { ImportSaisie } from '../components/ImportSaisie';
 import { Reduction } from '../components/affiche/Reduction';
 import { preparerDonnees } from '../lib/affiche-rendu';
 import './Saisie.css';
@@ -55,6 +56,8 @@ export function Saisie() {
     () => new Map(marques.map((m) => [m.id, m.nom])),
     [marques],
   );
+
+  const codesExistants = useMemo(() => new Set(affiches.map((a) => a.ean)), [affiches]);
 
   const charger = useCallback(async () => {
     if (!campagneId) return;
@@ -404,6 +407,18 @@ export function Saisie() {
           </>
         ) : null}
       </section>
+
+      {campagneId && utilisateur ? (
+        <ImportSaisie
+          campagneId={campagneId}
+          userId={utilisateur.id}
+          ordreDepart={affiches.length}
+          format={format}
+          codesExistants={codesExistants}
+          nomsMarques={nomsMarques}
+          surTermine={charger}
+        />
+      ) : null}
 
       <section className="carte">
         <h2 className="carte__titre">Affiches de la campagne</h2>

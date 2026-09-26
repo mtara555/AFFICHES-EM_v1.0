@@ -148,3 +148,60 @@
   background: #fff;
   max-width: 100%;
 }
+
+/* --------------------------------------------------------------------------
+   Import d'un fichier de prix
+   -------------------------------------------------------------------------- */
+
+.import-saisie__depart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.import-saisie__depart .carte__texte {
+  flex: 1 1 380px;
+  margin: 0;
+}
+
+.import-saisie__tableau {
+  max-height: 420px;
+  overflow: auto;
+  margin: var(--space-3) 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.import-saisie__tableau thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+
+.import-saisie__marque {
+  font-weight: var(--weight-semibold);
+}
+
+.import-saisie__ligne--erreur td,
+.import-saisie__ligne--erreur th,
+.import-saisie__ligne--ignore td,
+.import-saisie__ligne--ignore th {
+  color: var(--ink-faint);
+}
+
+.etiquette--alerte {
+  background: rgba(183, 121, 31, 0.12);
+  color: var(--warn);
+}
+
+label.bouton {
+  cursor: pointer;
+}
+
+label.bouton.est-desactive {
+  opacity: 0.55;
+  pointer-events: none;
+}
