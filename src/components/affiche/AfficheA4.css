@@ -188,6 +188,33 @@
   z-index: 11;
 }
 
+/* Une case par badge : une colonne jusqu'a 2 badges, deux colonnes au-dela. */
+.affiche__badges--colonne,
+.affiche__badges--grille {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-auto-rows: minmax(0, 1fr);
+  place-items: center end;
+}
+
+.affiche__badges--grille {
+  grid-template-columns: 1fr 1fr;
+  place-items: center;
+}
+
+.affiche__badge-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  object-position: right center;
+}
+
+.affiche__badges--grille .affiche__badge-image {
+  object-position: center;
+}
+
 .affiche__badge {
   display: inline-block;
   padding: 1.6mm 2.6mm;

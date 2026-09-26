@@ -27,6 +27,7 @@ import { ScannerCodeBarre } from '../components/ScannerCodeBarre';
 import { listerGabaritsOperation, modeleDepuisChoix, type GabaritOperation } from '../lib/gabarits-operation';
 import { Reduction } from '../components/affiche/Reduction';
 import { preparerDonnees } from '../lib/affiche-rendu';
+import { badgeParCle, MENTIONS, type CleBadge } from '../components/affiche/BadgesPromo';
 import './Saisie.css';
 
 export function Saisie() {
@@ -49,6 +50,8 @@ export function Saisie() {
   const [stockLimite, setStockLimite] = useState(false);
   const [nouveaute, setNouveaute] = useState(false);
   const [promotion, setPromotion] = useState(false);
+  const [mentions, setMentions] = useState<CleBadge[]>([]);
+  const [alerteMentions, setAlerteMentions] = useState(false);
 
   const [erreur, setErreur] = useState<string | null>(null);
   const [ajout, setAjout] = useState(false);
@@ -125,11 +128,12 @@ export function Saisie() {
         nouveaute,
         stockLimite,
         promotion,
+        mentions,
         modele: modeleDepuisChoix(campagne?.gabarit, operations),
       },
       parametres,
     );
-  }, [article, marques, prixBarre, prixPrincipal, nouveaute, stockLimite, promotion, parametres, campagne, operations]);
+  }, [article, marques, prixBarre, prixPrincipal, nouveaute, stockLimite, promotion, mentions, parametres, campagne, operations]);
 
   const regles = useMemo(
     () =>
@@ -151,6 +155,7 @@ export function Saisie() {
     setStockLimite(false);
     setNouveaute(false);
     setPromotion(false);
+    setMentions([]);
     champEan.current?.focus();
   }
 
@@ -165,7 +170,7 @@ export function Saisie() {
     setAjout(true);
     setErreur(null);
     try {
-      await ajouterAffiche(
+      const cree = await ajouterAffiche(
         campagneId,
         {
           ean: article.ean,
@@ -175,10 +180,13 @@ export function Saisie() {
           stockLimite,
           nouveaute,
           promotion,
+          mentions,
         },
         affiches.length,
         utilisateur.id,
       );
+      // Mentions cochees mais non enregistrees : la colonne manque dans Appwrite.
+      setAlerteMentions(mentions.length > 0 && cree.mentions.length === 0);
       reinitialiser();
       await charger();
     } catch (probleme) {
@@ -380,7 +388,30 @@ export function Saisie() {
                 />
                 Promotion limitee
               </label>
+              {MENTIONS.map((cle) => (
+                <label key={cle} className="case">
+                  <input
+                    type="checkbox"
+                    checked={mentions.includes(cle)}
+                    onChange={(e) =>
+                      setMentions((liste) =>
+                        e.target.checked
+                          ? MENTIONS.filter((m) => m === cle || liste.includes(m))
+                          : liste.filter((m) => m !== cle),
+                      )
+                    }
+                  />
+                  {badgeParCle(cle).libelle}
+                </label>
+              ))}
             </div>
+            {alerteMentions ? (
+              <p className="bandeau bandeau--alerte" role="alert">
+                Affiche ajoutee, mais les mentions (depliant, exclusivite, Marjane s&apos;engage) n&apos;ont
+                pas ete enregistrees : creez la colonne « mentions » (Texte) dans la table affiches
+                d&apos;Appwrite.
+              </p>
+            ) : null}
 
             <div className="apercu-regles">
               <h3 className="sous-titre">Calcule automatiquement</h3>
@@ -497,6 +528,11 @@ export function Saisie() {
                       {affiche.stockLimite ? <span className="pastille">Stock limite</span> : null}
                       {affiche.nouveaute ? <span className="pastille">Nouveaute</span> : null}
                       {affiche.promotion ? <span className="pastille">Promotion</span> : null}
+                      {affiche.mentions.map((m) => (
+                        <span key={m} className="pastille">
+                          {badgeParCle(m).libelle}
+                        </span>
+                      ))}
                     </div>
                   </td>
                   <td className="colonne-actions">

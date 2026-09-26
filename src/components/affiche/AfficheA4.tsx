@@ -5,6 +5,7 @@ import { formaterMontant } from '../../lib/regles';
 import { Visuel } from './Visuel';
 import { Pictogramme } from './Pictogramme';
 import { TexteAjuste } from './TexteAjuste';
+import { badgeParCle, type BadgePromo } from './BadgesPromo';
 import './AfficheA4.css';
 
 /** Positionne un element sur la zone du modele, en millimetres. */
@@ -39,11 +40,15 @@ export function AfficheA4({ donnees }: AfficheA4Props) {
   const principal = decouperMontant(donnees.prixPrincipal);
   const barre = decouperMontant(donnees.prixBarre);
   const mensualite = regles.mensualite !== null ? decouperMontant(regles.mensualite) : null;
-  const badges = [
-    donnees.badges.nouveaute ? 'Nouveauté' : null,
-    donnees.badges.stockLimite ? 'Stock limité' : null,
-    donnees.badges.promotion ? 'Offre limitée' : null,
-  ].filter((b): b is string => b !== null);
+  // Badges du kit PLV (images), dans l'ordre : Nouveau, Stock limite, puis les mentions.
+  const badges: BadgePromo[] = [
+    ...(donnees.badges.nouveaute ? [badgeParCle('nouveau')] : []),
+    ...(donnees.badges.stockLimite ? [badgeParCle('stock')] : []),
+    ...donnees.badges.mentions.map(badgeParCle),
+  ];
+  // « Promotion limitee » n'a pas de visuel dans le kit : cartouche texte.
+  const promotionTexte = donnees.badges.promotion;
+  const nbBadges = badges.length + (promotionTexte ? 1 : 0);
 
   return (
     <article
@@ -71,13 +76,15 @@ export function AfficheA4({ donnees }: AfficheA4Props) {
         />
       </div>
 
-      {badges.length > 0 ? (
-        <div className="affiche__badges" style={zone(COTES.badge)}>
+      {nbBadges > 0 ? (
+        <div
+          className={`affiche__badges affiche__badges--${nbBadges > 2 ? 'grille' : 'colonne'}`}
+          style={{ ...zone(COTES.badge), ['--nb-badges' as string]: nbBadges }}
+        >
           {badges.map((b) => (
-            <span key={b} className="affiche__badge">
-              {b}
-            </span>
+            <img key={b.cle} src={b.image} alt={b.libelle} className="affiche__badge-image" draggable={false} />
           ))}
+          {promotionTexte ? <span className="affiche__badge">Offre limitée</span> : null}
         </div>
       ) : null}
 

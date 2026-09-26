@@ -9,6 +9,7 @@
 import { ID, Query, AppwriteException, Permission, Role } from 'appwrite';
 import { tablesDB, DATABASE_ID, TABLES } from './appwrite';
 import type { FormatAffiche } from '../config/constants';
+import { lireMentions, type CleBadge } from '../components/affiche/BadgesPromo';
 
 export type StatutCampagne = 'brouillon' | 'validee' | 'imprimee' | 'archivee';
 
@@ -35,6 +36,8 @@ export interface Affiche {
   readonly stockLimite: boolean;
   readonly nouveaute: boolean;
   readonly promotion: boolean;
+  /** Badges supplementaires : Vu dans le depliant, Exclusivite, Marjane s'engage. */
+  readonly mentions: readonly CleBadge[];
   readonly ordre: number;
 }
 
@@ -46,6 +49,7 @@ export interface SaisieAffiche {
   stockLimite: boolean;
   nouveaute: boolean;
   promotion: boolean;
+  mentions?: readonly CleBadge[];
 }
 
 interface LigneCampagne {
@@ -67,6 +71,7 @@ interface LigneAffiche {
   stockLimite?: boolean | null;
   nouveaute?: boolean | null;
   promotion?: boolean | null;
+  mentions?: string | null;
   ordre?: number | null;
 }
 
@@ -89,6 +94,7 @@ const versAffiche = (l: LigneAffiche): Affiche => ({
   stockLimite: l.stockLimite ?? false,
   nouveaute: l.nouveaute ?? false,
   promotion: l.promotion ?? false,
+  mentions: lireMentions(l.mentions),
   ordre: l.ordre ?? 0,
 });
 
@@ -160,14 +166,23 @@ export async function changerGabaritCampagne(id: string, gabarit: string | null)
       databaseId: DATABASE_ID,
       tableId: TABLES.CAMPAGNES,
       rowId: id,
-      data: { gabarit: gabarit ?? '' },
+      data: { gabarit },
     });
     return versCampagne(ligne as unknown as LigneCampagne);
   } catch (erreur) {
-    if (erreur instanceof AppwriteException && /unknown attribute|invalid document structure|colonne|column/i.test(erreur.message)) {
+    // Colonne absente : message guide. Tout autre refus : message exact d'Appwrite,
+    // pour que la cause reelle (droits, type de colonne...) reste visible.
+    if (
+      erreur instanceof AppwriteException &&
+      /unknown (attribute|column)/i.test(erreur.message) &&
+      /gabarit/i.test(erreur.message)
+    ) {
       throw new Error(
-        "La colonne « gabarit » n'existe pas encore dans la table campagnes : ajoutez-la dans la console Appwrite (texte, 64 caracteres, facultative).",
+        "La colonne « gabarit » n'existe pas encore dans la table campagnes : ajoutez-la dans la console Appwrite (texte, facultative).",
       );
+    }
+    if (erreur instanceof AppwriteException) {
+      throw new Error(`Appwrite (${erreur.code}${erreur.type ? ` ${erreur.type}` : ''}) : ${erreur.message}`);
     }
     throw erreur;
   }
@@ -201,33 +216,65 @@ export async function listerAffiches(campagneId: string): Promise<Affiche[]> {
   return (reponse.rows as unknown as LigneAffiche[]).map(versAffiche);
 }
 
+/** Colonne « mentions » absente de la table affiches (a creer dans Appwrite). */
+const colonneMentionsAbsente = (e: unknown) =>
+  e instanceof AppwriteException && /unknown (attribute|column).*mentions/i.test(e.message);
+
+/**
+ * Donnees envoyees a Appwrite. La colonne « mentions » n'est envoyee que si
+ * elle sert, pour que l'application fonctionne avant sa creation.
+ */
+function versLigne(saisie: SaisieAffiche, avecMentions: boolean) {
+  const { mentions, ...reste } = saisie;
+  return avecMentions ? { ...reste, mentions: (mentions ?? []).join(',') } : reste;
+}
+
+/**
+ * Enregistre la ligne ; si la colonne « mentions » n'existe pas encore,
+ * enregistre sans elle. Les mentions sont alors perdues : l'ecran de saisie
+ * le detecte (affiche renvoyee sans mentions) et previent l'utilisateur.
+ */
+async function avecRepli<T>(saisie: SaisieAffiche, envoi: (data: object) => Promise<T>): Promise<T> {
+  const avecMentions = (saisie.mentions?.length ?? 0) > 0;
+  try {
+    return await envoi(versLigne(saisie, avecMentions));
+  } catch (e) {
+    if (avecMentions && colonneMentionsAbsente(e)) return envoi(versLigne(saisie, false));
+    throw e;
+  }
+}
+
 export async function ajouterAffiche(
   campagneId: string,
   saisie: SaisieAffiche,
   ordre: number,
   userId: string,
 ): Promise<Affiche> {
-  const ligne = await tablesDB.createRow({
-    databaseId: DATABASE_ID,
-    tableId: TABLES.AFFICHES,
-    rowId: ID.unique(),
-    data: { campagneId, ordre, ...saisie },
-    permissions: [
-      Permission.read(Role.user(userId)),
-      Permission.update(Role.user(userId)),
-      Permission.delete(Role.user(userId)),
-    ],
-  });
+  const ligne = await avecRepli(saisie, (data) =>
+    tablesDB.createRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.AFFICHES,
+      rowId: ID.unique(),
+      data: { campagneId, ordre, ...data },
+      permissions: [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId)),
+      ],
+    }),
+  );
   return versAffiche(ligne as unknown as LigneAffiche);
 }
 
 export async function modifierAffiche(id: string, saisie: SaisieAffiche): Promise<Affiche> {
-  const ligne = await tablesDB.updateRow({
-    databaseId: DATABASE_ID,
-    tableId: TABLES.AFFICHES,
-    rowId: id,
-    data: { ...saisie },
-  });
+  const ligne = await avecRepli(saisie, (data) =>
+    tablesDB.updateRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.AFFICHES,
+      rowId: id,
+      data,
+    }),
+  );
   return versAffiche(ligne as unknown as LigneAffiche);
 }
 

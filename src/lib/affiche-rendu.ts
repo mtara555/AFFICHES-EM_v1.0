@@ -6,6 +6,7 @@
  * composant de rendu reste ainsi purement visuel, sans aucun calcul metier.
  */
 
+import type { CleBadge } from '../components/affiche/BadgesPromo';
 import type { Affiche } from './campagnes';
 import type { Article } from './articles';
 import type { Marque } from './marques';
@@ -39,6 +40,7 @@ export interface DonneesAffiche {
     readonly nouveaute: boolean;
     readonly stockLimite: boolean;
     readonly promotion: boolean;
+    readonly mentions: readonly CleBadge[];
   };
 }
 
@@ -51,6 +53,7 @@ export interface EntreeDonnees {
   readonly nouveaute?: boolean;
   readonly stockLimite?: boolean;
   readonly promotion?: boolean;
+  readonly mentions?: readonly CleBadge[];
   /** Impose un modele (gabarit de campagne) ; a defaut, il suit la categorie de l'article. */
   readonly modele?: ModeleAffiche | null;
 }
@@ -79,6 +82,7 @@ export function preparerDonnees(
       nouveaute: entree.nouveaute ?? false,
       stockLimite: entree.stockLimite ?? false,
       promotion: entree.promotion ?? false,
+      mentions: entree.mentions ?? [],
     },
   };
 }
@@ -100,6 +104,7 @@ export function depuisAffiche(
       nouveaute: affiche.nouveaute,
       stockLimite: affiche.stockLimite,
       promotion: affiche.promotion,
+      mentions: affiche.mentions,
       modele,
     },
     parametres,
