@@ -23,6 +23,7 @@ import {
 import { FORMATS, FORMATS_ORDONNES, type FormatAffiche } from '../config/constants';
 import { AfficheA4 } from '../components/affiche/AfficheA4';
 import { ImportSaisie } from '../components/ImportSaisie';
+import { ScannerCodeBarre } from '../components/ScannerCodeBarre';
 import { Reduction } from '../components/affiche/Reduction';
 import { preparerDonnees } from '../lib/affiche-rendu';
 import './Saisie.css';
@@ -51,6 +52,10 @@ export function Saisie() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [ajout, setAjout] = useState(false);
   const champEan = useRef<HTMLInputElement>(null);
+  const champPrixBarre = useRef<HTMLInputElement>(null);
+  const [scanner, setScanner] = useState(false);
+  const cameraDisponible =
+    typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia);
 
   const nomsMarques = useMemo(
     () => new Map(marques.map((m) => [m.id, m.nom])),
@@ -83,8 +88,8 @@ export function Saisie() {
   }, [charger]);
 
   /** Recherche l'article des que le code saisi est plausible. */
-  async function chercherArticle() {
-    const code = ean.trim();
+  async function chercherArticle(codeLu?: string) {
+    const code = (codeLu ?? ean).trim();
     if (!code) return;
 
     setRecherche(true);
@@ -94,6 +99,8 @@ export function Saisie() {
       const trouve = await trouverParEan(code);
       setArticle(trouve);
       setIntrouvable(trouve === null);
+      // Apres un scan, on enchaine directement sur la saisie des prix.
+      if (trouve && codeLu) window.setTimeout(() => champPrixBarre.current?.focus(), 50);
     } catch (probleme) {
       setErreur(messageErreurCampagne(probleme));
     } finally {
@@ -238,12 +245,37 @@ export function Saisie() {
           <button
             type="button"
             className="bouton bouton--discret"
-            onClick={chercherArticle}
+            onClick={() => void chercherArticle()}
             disabled={recherche || !ean.trim()}
           >
             {recherche ? 'Recherche…' : 'Rechercher'}
           </button>
+          {cameraDisponible ? (
+            <button
+              type="button"
+              className="bouton bouton--principal bouton--scanner"
+              onClick={() => setScanner(true)}
+              title="Scanner le code-barres avec la camera"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+                <path d="M7 8v8M10 8v8M13 8v8M17 8v8" />
+              </svg>
+              Scanner
+            </button>
+          ) : null}
         </div>
+
+        <ScannerCodeBarre
+          ouvert={scanner}
+          surFermer={() => setScanner(false)}
+          surCode={(code) => {
+            setScanner(false);
+            setEan(code);
+            setArticle(null);
+            void chercherArticle(code);
+          }}
+        />
 
         {introuvable ? (
           <p className="bandeau bandeau--alerte">
@@ -279,6 +311,7 @@ export function Saisie() {
               <div className="champ">
                 <label htmlFor="prixBarre">Prix barre (dh)</label>
                 <input
+                  ref={champPrixBarre}
                   id="prixBarre"
                   type="text"
                   inputMode="decimal"

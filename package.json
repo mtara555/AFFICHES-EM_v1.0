@@ -13,6 +13,7 @@
     "migrate:articles": "node scripts/migrate-articles.mjs"
   },
   "dependencies": {
+    "@zxing/browser": "^0.2.1",
     "appwrite": "^26.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -205,3 +205,20 @@ label.bouton.est-desactive {
   opacity: 0.55;
   pointer-events: none;
 }
+
+/* Telephone : champ du code sur toute la largeur, boutons dessous. */
+@media (max-width: 600px) {
+  .ligne-ean {
+    flex-wrap: wrap;
+  }
+
+  .ligne-ean .champ {
+    flex: 1 1 100%;
+  }
+
+  .ligne-ean .bouton {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 44px;
+  }
+}
