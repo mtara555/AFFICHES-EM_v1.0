@@ -2,6 +2,7 @@ import { idPictogramme } from '../../lib/appwrite';
 import { Visuel } from './Visuel';
 import { TexteAjuste } from './TexteAjuste';
 import { PictoVectoriel, reconnaitre } from './PictoVectoriel';
+import { trouverBadge } from './BadgesPromo';
 
 interface PictogrammeProps {
   readonly code: string;
@@ -18,7 +19,8 @@ function dureeGarantie(code: string): number | null {
  *
  * Le visuel televerse (`picto_<CODE>`) est prioritaire. A defaut, un rendu
  * vectoriel reprend la charte du kit PLV : cartouche rouge pour la garantie,
- * dessins dedies (tours, kg, USB, HDMI, 4K, Wi-Fi, TNT, HDR, HD, taille d ecran) et hexagone
+ * dessins dedies (tours, kg, USB, HDMI, 4K, Wi-Fi, TNT, HDR, HD, taille d ecran), badges promotionnels
+ * (Stock limite, Nouveau, Vu dans le depliant, Exclusivite, Marjane s'engage) et hexagone
  * jaune avec le texte du code pour toute autre caracteristique. L'affiche reste donc
  * exploitable meme avant que la bibliotheque de pictogrammes soit complete.
  */
@@ -35,6 +37,11 @@ export function Pictogramme({ code }: PictogrammeProps) {
 }
 
 function PictogrammeSecours({ code }: PictogrammeProps) {
+  const badge = trouverBadge(code);
+  if (badge) {
+    return <img src={badge.image} alt={badge.libelle} className="affiche__picto-image" draggable={false} />;
+  }
+
   const annees = dureeGarantie(code);
   if (annees !== null) {
     const unite = annees > 1 ? 'ANS' : 'AN';
