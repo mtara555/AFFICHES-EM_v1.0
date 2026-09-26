@@ -18,7 +18,7 @@ function dureeGarantie(code: string): number | null {
  *
  * Le visuel televerse (`picto_<CODE>`) est prioritaire. A defaut, un rendu
  * vectoriel reprend la charte du kit PLV : cartouche rouge pour la garantie,
- * dessins dedies (tours, kg, USB, HDMI, 4K, Wi-Fi, TNT, HDR, HD) et hexagone
+ * dessins dedies (tours, kg, USB, HDMI, 4K, Wi-Fi, TNT, HDR, HD, taille d ecran) et hexagone
  * jaune avec le texte du code pour toute autre caracteristique. L'affiche reste donc
  * exploitable meme avant que la bibliotheque de pictogrammes soit complete.
  */

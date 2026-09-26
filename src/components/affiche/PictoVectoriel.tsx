@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 /**
  * Pictogrammes vectoriels du kit PLV Electro, dessines a partir du code saisi
  * dans le catalogue : « 1200T », « 7KG », « 3USB », « 4HDMI », « 4KUHD »,
- * « WIFI », « TNTHD », « HDR10+ », « ULTRAHD », « FULLHD », « HD ».
+ * « WIFI », « TNTHD », « HDR10+ », « ULTRAHD », « FULLHD », « HD »,
+ * et la taille d'ecran « 75" » (ou « 75 POUCES », « 75PO », « 75IN »).
  *
  * Toutes les variantes chiffrees (1000T, 1400T, 8KG, 9KG, 1 a 5 USB…) sont
  * produites par le meme dessin : aucun fichier image n'est a preparer.
@@ -28,12 +29,19 @@ export type Modele =
   | { type: 'wifi' }
   | { type: 'tnt' }
   | { type: 'hdr'; suffixe: string }
-  | { type: 'resolution'; haut: string | null; bas: string };
+  | { type: 'resolution'; haut: string | null; bas: string }
+  | { type: 'ecran'; pouces: string };
 
 /** Renvoie le modele de dessin correspondant au code, ou null (rendu texte). */
 export function reconnaitre(code: string): Modele | null {
   const c = code.toUpperCase().replace(/[\s_.-]/g, '');
   let m: RegExpExecArray | null;
+
+  // Taille d'ecran : 75", 75'', 75″, 75 POUCES, 75PO, 75IN, 75INCH, 65"...
+  const e = code.toUpperCase().replace(/\s/g, '').replace(/[“”″]/g, '"').replace(/''/g, '"');
+  if ((m = /^(\d{2,3}(?:[,.]\d)?)("|POUCES?|PO|IN|INCH|INCHES)$/.exec(e))) {
+    return { type: 'ecran', pouces: m[1]!.replace('.', ',') };
+  }
 
   if ((m = /^(\d{3,4})(T|TR|TRS|TOURS?|TRMIN|RPM)$/.exec(c))) return { type: 'tours', valeur: m[1]! };
   if ((m = /^(\d{1,2}(?:,\d)?)KGS?$/.exec(code.toUpperCase().replace(/\s/g, '').replace('.', ',')))) {
@@ -268,6 +276,35 @@ function Resolution({ haut, bas }: { haut: string | null; bas: string }) {
   );
 }
 
+export const ROUGE = '#e30613';
+
+/**
+ * Taille d'ecran (TV, PC, tablette…) : triangle rouge dans l'angle superieur
+ * droit, diagonale du coin haut-gauche au coin bas-droit, valeur en blanc.
+ */
+function Ecran({ pouces }: { pouces: string }) {
+  const texte = `${pouces}"`;
+  const trop = largeurEstimee(texte, 40) > 68;
+  return (
+    <svg className="affiche__picto-svg" viewBox="0 0 120 120" role="img" aria-label={`Ecran ${pouces} pouces`}>
+      <polygon points="0,0 120,0 120,120" fill={ROUGE} />
+      <text
+        x={116}
+        y={44}
+        textAnchor="end"
+        fill="#ffffff"
+        fontFamily={POLICE}
+        fontWeight={900}
+        fontSize={40}
+        textLength={trop ? 68 : undefined}
+        lengthAdjust={trop ? 'spacingAndGlyphs' : undefined}
+      >
+        {texte}
+      </text>
+    </svg>
+  );
+}
+
 /** Dessine le pictogramme du modele reconnu. */
 export function PictoVectoriel({ modele }: { modele: Modele }) {
   switch (modele.type) {
@@ -289,5 +326,7 @@ export function PictoVectoriel({ modele }: { modele: Modele }) {
       return <Hdr suffixe={modele.suffixe} />;
     case 'resolution':
       return <Resolution haut={modele.haut} bas={modele.bas} />;
+    case 'ecran':
+      return <Ecran pouces={modele.pouces} />;
   }
 }
