@@ -6,6 +6,7 @@ import { creerArticle, listerTousLesCodes, messageErreurArticle } from '../lib/a
 import { analyser, lireClasseur, type Analyse } from '../lib/import-catalogue';
 import { CATEGORIES, type CategorieProduit } from '../config/constants';
 import './ImportCatalogue.css';
+import { tracer } from '../lib/journal';
 
 type Progression = {
   traites: number;
@@ -144,6 +145,7 @@ export function ImportCatalogue() {
     setErreurs(echecs);
     setProgression(null);
     setTermine(true);
+    tracer('creation', 'articles', `Import du catalogue : ${crees} article(s) cree(s), ${ignores} deja present(s)${echecs.length ? `, ${echecs.length} echec(s)` : ''}${arret.current ? ' — interrompu' : ''}`);
     if (arret.current) {
       setErreur(`Import interrompu : ${crees} article(s) cree(s). Relancez-le pour continuer, les articles deja crees seront ignores.`);
     }

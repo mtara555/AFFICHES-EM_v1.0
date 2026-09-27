@@ -11,6 +11,7 @@ import { Saisie } from './pages/Saisie';
 import { Impression } from './pages/Impression';
 import { ListeAffiches } from './pages/ListeAffiches';
 import { Parametres } from './pages/Parametres';
+import { Journal } from './pages/Journal';
 
 export function App() {
   return (
@@ -102,6 +103,17 @@ export function App() {
           element={
             <RouteProtegee roles={['administrateur']}>
               <Parametres />
+            </RouteProtegee>
+          }
+        />
+
+        {/* Journal des connexions et des actions : administrateurs seulement.
+            La lecture de la table est aussi reservee aux admins dans Appwrite. */}
+        <Route
+          path="/journal"
+          element={
+            <RouteProtegee roles={['administrateur']}>
+              <Journal />
             </RouteProtegee>
           }
         />

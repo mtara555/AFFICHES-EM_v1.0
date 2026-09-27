@@ -27,6 +27,7 @@ import {
   type GabaritOperation,
 } from '../lib/gabarits-operation';
 import './Impression.css';
+import { tracer } from '../lib/journal';
 
 
 interface PlancheCalculee {
@@ -118,6 +119,7 @@ export function Impression() {
     if (!campagne) return;
     try {
       setCampagne(await changerGabaritCampagne(campagne.id, valeur === 'auto' ? null : valeur));
+      tracer('modification', 'campagnes', `Campagne « ${campagne.nom} » : gabarit ${valeur}`);
     } catch (probleme) {
       setMessageGabarit(
         `${messageErreurCampagne(probleme)} Le gabarit est applique pour cette impression seulement.`,
@@ -175,6 +177,9 @@ export function Impression() {
     try {
       await attendreRenduComplet();
       window.print();
+      if (campagne) {
+        tracer('export', 'impression', `Impression / PDF : campagne « ${campagne.nom} » — ${donnees.length} affiche(s) sur ${planches.length} feuille(s) A4`);
+      }
       if (campagne && campagne.statut === 'validee') {
         // Trace simple : la campagne passe a « imprimee » apres l'envoi.
         try {

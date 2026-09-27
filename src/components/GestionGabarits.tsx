@@ -16,6 +16,7 @@ import { preparerDonnees } from '../lib/affiche-rendu';
 import { PARAMETRES_DEFAUT } from '../lib/regles';
 import { LIBELLE_DISPOSITION, type Disposition } from '../config/gabarits';
 import type { Article } from '../lib/articles';
+import { tracer } from '../lib/journal';
 
 const DISPOSITIONS: readonly Disposition[] = ['standard', 'macaron-large'];
 
@@ -81,6 +82,7 @@ export function GestionGabarits() {
     setMessage(null);
     try {
       const g = await ajouterGabaritOperation(nom, fichier, disposition);
+      tracer('creation', 'gabarits', `Gabarit d'operation ajoute : ${g.nom}`);
       setMessage(
         `Gabarit « ${g.nom} » ajoute${g.cadreDessus ? '' : ' (image opaque : le cadre sera place sous le contenu)'}. Il est maintenant propose dans la page Affiches de chaque campagne.`,
       );
@@ -99,6 +101,7 @@ export function GestionGabarits() {
     setErreur(null);
     try {
       await modifierDisposition(g.id, d);
+      tracer('modification', 'gabarits', `Gabarit « ${g.nom} » : mise en page ${d}`);
       await charger();
     } catch (probleme) {
       setErreur(messageErreurGabarit(probleme));
@@ -113,6 +116,7 @@ export function GestionGabarits() {
     setMessage(null);
     try {
       await supprimerGabaritOperation(g);
+      tracer('suppression', 'gabarits', `Gabarit d'operation supprime : ${g.nom}`);
       if (apercuId === g.id) setApercuId(null);
       await charger();
       setMessage(`Gabarit « ${g.nom} » supprime.`);

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { estConfigure } from '../lib/appwrite';
 import { APP_NAME, APP_VERSION } from '../config/constants';
 import './Connexion.css';
+import { definirNomAppareilLocal, nomAppareilLocal } from '../lib/journal';
 
 export function Connexion() {
   const { utilisateur, connexion } = useAuth();
@@ -13,6 +14,7 @@ export function Connexion() {
   const [motDePasse, setMotDePasse] = useState('');
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+  const [nomAppareil, setNomAppareil] = useState(nomAppareilLocal);
 
   if (utilisateur) {
     const destination = (emplacement.state as { origine?: string } | null)?.origine ?? '/';
@@ -24,6 +26,7 @@ export function Connexion() {
     setErreur(null);
     setEnCours(true);
     try {
+      definirNomAppareilLocal(nomAppareil);
       await connexion(email.trim(), motDePasse);
     } catch (probleme) {
       setErreur(probleme instanceof Error ? probleme.message : 'La connexion a echoue.');
@@ -78,6 +81,19 @@ export function Connexion() {
               required
               value={motDePasse}
               onChange={(e) => setMotDePasse(e.target.value)}
+              disabled={enCours || !estConfigure}
+            />
+          </div>
+
+          <div className="champ">
+            <label htmlFor="nomAppareil">Nom de cet appareil (facultatif)</label>
+            <input
+              id="nomAppareil"
+              type="text"
+              placeholder="PC Decoration, Telephone Karim…"
+              maxLength={60}
+              value={nomAppareil}
+              onChange={(e) => setNomAppareil(e.target.value)}
               disabled={enCours || !estConfigure}
             />
           </div>

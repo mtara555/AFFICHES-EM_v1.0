@@ -13,6 +13,7 @@ import {
   type StatutCampagne,
 } from '../lib/campagnes';
 import './Campagnes.css';
+import { tracer } from '../lib/journal';
 
 export function Campagnes() {
   const { utilisateur } = useAuth();
@@ -46,6 +47,7 @@ export function Campagnes() {
     setErreur(null);
     try {
       await creerCampagne(nom, utilisateur.id);
+      tracer('creation', 'campagnes', `Campagne creee : ${nom}`);
       setNouveauNom('');
       await charger();
     } catch (probleme) {
@@ -59,6 +61,7 @@ export function Campagnes() {
     setErreur(null);
     try {
       await changerStatutCampagne(campagne.id, statut);
+      tracer('modification', 'campagnes', `Campagne « ${campagne.nom} » : statut ${statut}`);
       await charger();
     } catch (probleme) {
       setErreur(messageErreurCampagne(probleme));
@@ -75,6 +78,7 @@ export function Campagnes() {
     setErreur(null);
     try {
       await supprimerCampagne(campagne.id);
+      tracer('suppression', 'campagnes', `Campagne supprimee : ${campagne.nom}`);
       await charger();
     } catch (probleme) {
       setErreur(messageErreurCampagne(probleme));

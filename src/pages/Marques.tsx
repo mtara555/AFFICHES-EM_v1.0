@@ -20,6 +20,7 @@ import {
 } from '../lib/logos';
 import { MARQUES_CATALOGUE } from '../config/marques-catalogue';
 import './Marques.css';
+import { tracer } from '../lib/journal';
 
 type Edition = { readonly id: string | null; nom: string; actif: boolean };
 
@@ -93,9 +94,11 @@ export function Marques() {
     try {
       if (edition.id) {
         await modifierMarque(edition.id, { nom, actif: edition.actif });
+        tracer('modification', 'marques', `Marque modifiee : ${nom}${edition.actif ? '' : ' (inactive)'}`);
         setMessage(`Marque « ${nom} » modifiee.`);
       } else {
         await creerMarque({ nom, actif: edition.actif });
+        tracer('creation', 'marques', `Marque creee : ${nom}`);
         setMessage(`Marque « ${nom} » creee.`);
       }
       setEdition(EDITION_VIDE);
@@ -118,6 +121,7 @@ export function Marques() {
     setMessage(null);
     try {
       await supprimerMarque(marque.id);
+      tracer('suppression', 'marques', `Marque supprimee : ${marque.nom}`);
       setMessage(`Marque « ${marque.nom} » supprimee.`);
       if (edition.id === marque.id) setEdition(EDITION_VIDE);
       await recharger();
@@ -146,6 +150,7 @@ export function Marques() {
         resultat.erreurs.length > 0 ? `${resultat.erreurs.length} en echec` : null,
       ].filter(Boolean);
       setMessage(`Import termine : ${details.join(', ')}.`);
+      tracer('creation', 'marques', `Import des marques : ${details.join(', ')}`);
       if (resultat.erreurs.length > 0) {
         setErreur(
           `Echecs : ${resultat.erreurs
@@ -169,6 +174,7 @@ export function Marques() {
     setLogoEnCours(marque.id);
     try {
       await televerserLogo(marque, fichier);
+      tracer('modification', 'marques', `Logo enregistre : ${marque.nom}`);
       incrementerVersion(marque.id);
       setMessage(`Logo de « ${marque.nom} » enregistre.`);
       await recharger();
@@ -186,6 +192,7 @@ export function Marques() {
     setLogoEnCours(marque.id);
     try {
       await supprimerLogo(marque);
+      tracer('suppression', 'marques', `Logo retire : ${marque.nom}`);
       incrementerVersion(marque.id);
       setMessage(`Logo de « ${marque.nom} » retire. Le nom de la marque s'affichera a sa place.`);
       await recharger();
@@ -233,6 +240,7 @@ export function Marques() {
     setLotProgression(null);
     setLot(null);
     setMessage(`${aEnvoyer.length - echecs.length} logo(s) enregistre(s).`);
+    tracer('modification', 'marques', `Envoi groupe de logos : ${aEnvoyer.length - echecs.length} enregistre(s)`);
     if (echecs.length > 0) setErreur(`Echecs : ${echecs.join(' ; ')}`);
     await recharger();
   }

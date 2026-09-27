@@ -85,6 +85,17 @@ const NAVIGATION: readonly EntreeNavigation[] = [
     ),
   },
   {
+    to: '/journal',
+    libelle: 'Journal',
+    reserveAdmin: true,
+    icone: (
+      <Icone>
+        <path d="M5 3h11l3 3v15H5z" />
+        <path d="M9 8h6M9 12h6M9 16h4" />
+      </Icone>
+    ),
+  },
+  {
     to: '/parametres',
     libelle: 'Parametres',
     reserveAdmin: true,

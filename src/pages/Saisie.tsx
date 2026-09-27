@@ -30,6 +30,7 @@ import { Reduction } from '../components/affiche/Reduction';
 import { preparerDonnees } from '../lib/affiche-rendu';
 import { badgeParCle, MENTIONS, type CleBadge } from '../components/affiche/BadgesPromo';
 import './Saisie.css';
+import { tracer } from '../lib/journal';
 
 export function Saisie() {
   const { campagneId } = useParams<{ campagneId: string }>();
@@ -190,6 +191,11 @@ export function Saisie() {
       const resultat = enEdition
         ? await modifierAffiche(enEdition.id, saisie)
         : await ajouterAffiche(campagneId, saisie, affiches.length, utilisateur.id);
+      tracer(
+        enEdition ? 'modification' : 'creation',
+        'affiches',
+        `${enEdition ? 'Affiche modifiee' : 'Affiche saisie'} : ${article.ean} ${article.designation} — prix ${formaterMontant(N)} dh${saisie.prixBarre > 0 ? ` (barre ${formaterMontant(saisie.prixBarre)} dh)` : ''}, ${format} — campagne « ${campagne?.nom ?? campagneId} »`,
+      );
       // Mentions cochees mais non enregistrees : la colonne manque dans Appwrite.
       setAlerteMentions(mentions.length > 0 && resultat.mentions.length === 0);
       reinitialiser();
@@ -222,6 +228,7 @@ export function Saisie() {
     setErreur(null);
     try {
       await supprimerAffiche(affiche.id);
+      tracer('suppression', 'affiches', `Affiche retiree : ${affiche.ean} — ${formaterMontant(affiche.prixPrincipal)} dh — campagne « ${campagne?.nom ?? campagneId} »`);
       if (enEdition?.id === affiche.id) reinitialiser();
       await charger();
     } catch (probleme) {

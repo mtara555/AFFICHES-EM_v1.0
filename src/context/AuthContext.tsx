@@ -12,6 +12,20 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { seConnecter, seDeconnecter, utilisateurCourant, type Utilisateur } from '../lib/auth';
 import { estConfigure } from '../lib/appwrite';
+import { definirAuteur, journaliser } from '../lib/journal';
+
+const CLE_OUVERTURE = 'affiches-em.ouverture-journalisee';
+
+/** Une ligne « ouverture » par onglet, quand l'application reprend une session existante. */
+function tracerOuverture() {
+  try {
+    if (sessionStorage.getItem(CLE_OUVERTURE)) return;
+    sessionStorage.setItem(CLE_OUVERTURE, '1');
+  } catch {
+    return;
+  }
+  void journaliser('connexion', 'session', "Ouverture de l'application (session deja ouverte)");
+}
 
 interface ContexteAuth {
   readonly utilisateur: Utilisateur | null;
@@ -36,7 +50,12 @@ export function FournisseurAuth({ children }: { children: ReactNode }) {
 
     utilisateurCourant()
       .then((resultat) => {
-        if (actif) setUtilisateur(resultat);
+        if (!actif) return;
+        setUtilisateur(resultat);
+        if (resultat) {
+          definirAuteur({ id: resultat.id, nom: resultat.nom });
+          tracerOuverture();
+        }
       })
       .finally(() => {
         if (actif) setEnCoursDeVerification(false);
@@ -50,11 +69,26 @@ export function FournisseurAuth({ children }: { children: ReactNode }) {
 
   const connexion = useCallback(async (email: string, motDePasse: string) => {
     const resultat = await seConnecter(email, motDePasse);
+    definirAuteur({ id: resultat.id, nom: resultat.nom });
+    try {
+      sessionStorage.setItem(CLE_OUVERTURE, '1');
+    } catch {
+      /* sans importance */
+    }
+    void journaliser('connexion', 'session', `Connexion (${resultat.email}, role ${resultat.role})`);
     setUtilisateur(resultat);
   }, []);
 
   const deconnexion = useCallback(async () => {
+    // Ecrit avant de fermer la session : apres, Appwrite refuserait l'ecriture.
+    await journaliser('connexion', 'session', 'Deconnexion');
     await seDeconnecter();
+    definirAuteur(null);
+    try {
+      sessionStorage.removeItem(CLE_OUVERTURE);
+    } catch {
+      /* sans importance */
+    }
     setUtilisateur(null);
   }, []);
 

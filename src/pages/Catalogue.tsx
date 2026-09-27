@@ -18,6 +18,7 @@ import { CATEGORIES, type CategorieProduit } from '../config/constants';
 import { marqueLaPlusProche, type Correction } from '../lib/correcteur';
 import { chargerVocabulaire, oublierVocabulaire, type Vocabulaire } from '../lib/vocabulaire';
 import './Catalogue.css';
+import { tracer } from '../lib/journal';
 
 const PAR_PAGE = 25;
 
@@ -141,9 +142,11 @@ export function Catalogue() {
       oublierVocabulaire();
       if (idEdite) {
         await modifierArticle(idEdite, saisie);
+        tracer('modification', 'articles', `Article modifie : ${saisie.ean} ${saisie.designation} — ${nomsMarques.get(saisie.marqueId) ?? ''} ${saisie.reference}`);
         setMessage(`Article « ${saisie.designation} » modifie.`);
       } else {
         await creerArticle(saisie);
+        tracer('creation', 'articles', `Article cree : ${saisie.ean} ${saisie.designation} — ${nomsMarques.get(saisie.marqueId) ?? ''} ${saisie.reference}`);
         setMessage(`Article « ${saisie.designation} » cree.`);
       }
       fermerFormulaire();
@@ -164,6 +167,7 @@ export function Catalogue() {
     setErreur(null);
     try {
       await supprimerArticle(article.id);
+      tracer('suppression', 'articles', `Article supprime : ${article.ean} ${article.designation}`);
       setMessage('Article supprime.');
       await charger();
     } catch (probleme) {

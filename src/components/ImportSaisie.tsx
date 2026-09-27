@@ -8,6 +8,7 @@ import {
   type LigneImport,
 } from '../lib/import-saisie';
 import type { FormatAffiche } from '../config/constants';
+import { tracer } from '../lib/journal';
 
 interface ImportSaisieProps {
   readonly campagneId: string;
@@ -135,6 +136,7 @@ export function ImportSaisie({
       }
     }
     setProgression(null);
+    tracer('creation', 'affiches', `Import d'un fichier de prix : ${liste.length - echecs.length} affiche(s) ajoutee(s)${echecs.length ? `, ${echecs.length} echec(s)` : ''} (campagne ${campagneId})`);
     const nonTrouves = affichees.filter((l) => l.motif === 'Code absent du catalogue').map((l) => l.code);
     setBilan(
       [
