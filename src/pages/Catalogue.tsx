@@ -15,6 +15,8 @@ import {
   type SaisieArticle,
 } from '../lib/articles';
 import { CATEGORIES, type CategorieProduit } from '../config/constants';
+import { marqueLaPlusProche, type Correction } from '../lib/correcteur';
+import { chargerVocabulaire, oublierVocabulaire, type Vocabulaire } from '../lib/vocabulaire';
 import './Catalogue.css';
 
 const PAR_PAGE = 25;
@@ -61,6 +63,26 @@ export function Catalogue() {
 
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  // Assistance a la saisie : listes de suggestions et correcteur orthographique.
+  const [vocabulaire, setVocabulaire] = useState<Vocabulaire | null>(null);
+  const [texteMarque, setTexteMarque] = useState('');
+  const [avisMarque, setAvisMarque] = useState<string | null>(null);
+  const [corrections, setCorrections] = useState<
+    Partial<Record<'designation' | 'reference', { avant: string; liste: readonly Correction[] }>>
+  >({});
+
+  /** Dictionnaire enrichi des noms de marques (jamais « corriges »). */
+  const dictionnaire = useMemo(() => {
+    if (!vocabulaire) return null;
+    vocabulaire.dictionnaire.ajouter(marques.map((m) => m.nom));
+    return vocabulaire.dictionnaire;
+  }, [vocabulaire, marques]);
+
+  const referencesMarque = useMemo(
+    () => (saisie && vocabulaire ? (vocabulaire.referencesParMarque.get(saisie.marqueId) ?? []) : []),
+    [saisie, vocabulaire],
+  );
 
   const nomsMarques = useMemo(() => {
     const table = new Map<string, string>();
@@ -116,6 +138,7 @@ export function Catalogue() {
     setErreur(null);
     setMessage(null);
     try {
+      oublierVocabulaire();
       if (idEdite) {
         await modifierArticle(idEdite, saisie);
         setMessage(`Article « ${saisie.designation} » modifie.`);
@@ -148,21 +171,95 @@ export function Catalogue() {
     }
   }
 
+  /** Le vocabulaire (suggestions + correcteur) est lu a l'ouverture du formulaire. */
+  function preparerAssistance(marqueId: string) {
+    setTexteMarque(nomsMarques.get(marqueId) ?? '');
+    setAvisMarque(null);
+    setCorrections({});
+    chargerVocabulaire()
+      .then(setVocabulaire)
+      .catch(() => setVocabulaire(null)); // sans vocabulaire, la saisie reste possible
+  }
+
   function ouvrirCreation() {
     setIdEdite(null);
     setSaisie({ ...SAISIE_VIDE, pictos: Array.from({ length: NB_PICTOS }, () => '') });
     setErreur(null);
+    preparerAssistance('');
   }
 
   function ouvrirEdition(article: Article) {
     setIdEdite(article.id);
     setSaisie(versSaisie(article));
     setErreur(null);
+    preparerAssistance(article.marqueId);
   }
 
   function fermerFormulaire() {
     setSaisie(null);
     setIdEdite(null);
+    setCorrections({});
+    setAvisMarque(null);
+  }
+
+  /** Marque tapee : exacte, ou corrigee vers la marque existante la plus proche. */
+  function validerMarque(texte: string) {
+    if (!saisie) return;
+    if (!texte.trim()) {
+      setSaisie({ ...saisie, marqueId: '' });
+      setAvisMarque(null);
+      return;
+    }
+    const m = marqueLaPlusProche(texte, marques);
+    if (!m) {
+      setSaisie({ ...saisie, marqueId: '' });
+      setAvisMarque(`Marque « ${texte.trim()} » inconnue : creez-la d'abord dans le menu Marques.`);
+      return;
+    }
+    const corrigee = m.nom.toUpperCase() !== texte.trim().toUpperCase();
+    setTexteMarque(m.nom);
+    setSaisie({ ...saisie, marqueId: m.id });
+    setAvisMarque(corrigee ? `Marque corrigee : « ${texte.trim()} » → « ${m.nom} ».` : null);
+  }
+
+  /** Correction automatique a la sortie du champ (majuscules sans accents + fautes). */
+  function corrigerChamp(champ: 'designation' | 'reference') {
+    if (!saisie || !dictionnaire) return;
+    const avant = saisie[champ];
+    if (!avant.trim()) return;
+    // La reference contient surtout des codes : on n'y corrige que les mots de 5 lettres et plus.
+    const r = dictionnaire.corriger(avant, champ === 'reference' ? 5 : 4);
+    const suite: SaisieArticle = { ...saisie, [champ]: r.texte };
+    // Designation connue : on propose sa categorie habituelle (nouvel article seulement).
+    if (champ === 'designation' && !idEdite && vocabulaire) {
+      const cat = vocabulaire.categorieParDesignation.get(r.texte);
+      if (cat) suite.categorie = cat;
+    }
+    setSaisie(suite);
+    setCorrections((c) => ({
+      ...c,
+      [champ]: r.corrections.length > 0 ? { avant, liste: r.corrections } : undefined,
+    }));
+  }
+
+  function annulerCorrection(champ: 'designation' | 'reference') {
+    const c = corrections[champ];
+    if (!saisie || !c) return;
+    setSaisie({ ...saisie, [champ]: c.avant });
+    setCorrections((x) => ({ ...x, [champ]: undefined }));
+  }
+
+  function AvisCorrection({ champ }: { champ: 'designation' | 'reference' }) {
+    const c = corrections[champ];
+    if (!c) return null;
+    return (
+      <p className="champ__aide champ__aide--correction">
+        Corrige : {c.liste.map((x) => `${x.de} → ${x.vers}`).join(', ')}{' '}
+        <button type="button" className="lien-bouton" onClick={() => annulerCorrection(champ)}>
+          Annuler
+        </button>
+      </p>
+    );
   }
 
   function majPicto(index: number, valeur: string) {
@@ -224,19 +321,33 @@ export function Catalogue() {
 
             <div className="champ">
               <label htmlFor="marque">Marque</label>
-              <select
+              <input
                 id="marque"
-                value={saisie.marqueId}
-                onChange={(e) => setSaisie({ ...saisie, marqueId: e.target.value })}
+                type="text"
+                list="liste-marques"
+                autoComplete="off"
+                placeholder="Tapez ou choisissez…"
+                value={texteMarque}
+                onChange={(e) => {
+                  setTexteMarque(e.target.value);
+                  // Choix dans la liste : la marque est reconnue tout de suite.
+                  const exacte = marques.find((m) => m.nom.toUpperCase() === e.target.value.trim().toUpperCase());
+                  setSaisie({ ...saisie, marqueId: exacte?.id ?? '' });
+                  if (exacte) setAvisMarque(null);
+                }}
+                onBlur={(e) => validerMarque(e.target.value)}
                 disabled={enregistrement}
-              >
-                <option value="">— Choisir —</option>
+              />
+              <datalist id="liste-marques">
                 {marques.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nom}
-                  </option>
+                  <option key={m.id} value={m.nom} />
                 ))}
-              </select>
+              </datalist>
+              {avisMarque ? (
+                <p className={`champ__aide ${saisie.marqueId ? 'champ__aide--correction' : 'champ__aide--alerte'}`}>
+                  {avisMarque}
+                </p>
+              ) : null}
             </div>
 
             <div className="champ">
@@ -245,10 +356,20 @@ export function Catalogue() {
                 id="designation"
                 type="text"
                 placeholder="TV LED"
+                list="liste-designations"
+                autoComplete="off"
+                spellCheck
                 value={saisie.designation}
                 onChange={(e) => setSaisie({ ...saisie, designation: e.target.value })}
+                onBlur={() => corrigerChamp('designation')}
                 disabled={enregistrement}
               />
+              <datalist id="liste-designations">
+                {(vocabulaire?.designations ?? []).map((d) => (
+                  <option key={d} value={d} />
+                ))}
+              </datalist>
+              <AvisCorrection champ="designation" />
             </div>
 
             <div className="champ">
@@ -275,10 +396,24 @@ export function Catalogue() {
                 id="reference"
                 type="text"
                 placeholder="OLED QA83S85HAEXMV SAMSUNG"
+                list="liste-references"
+                autoComplete="off"
                 value={saisie.reference}
                 onChange={(e) => setSaisie({ ...saisie, reference: e.target.value })}
+                onBlur={() => corrigerChamp('reference')}
                 disabled={enregistrement}
               />
+              <datalist id="liste-references">
+                {referencesMarque.map((r) => (
+                  <option key={r} value={r} />
+                ))}
+              </datalist>
+              <AvisCorrection champ="reference" />
+              <p className="champ__aide">
+                {saisie.marqueId
+                  ? `${referencesMarque.length} reference(s) existante(s) pour cette marque dans la liste.`
+                  : 'Choisissez la marque pour voir ses references existantes.'}
+              </p>
             </div>
           </div>
 

@@ -165,3 +165,21 @@
   color: var(--ink-faint);
   font-family: var(--font-mono);
 }
+
+/* --------------------------------------------------------------------------
+   Correcteur orthographique
+   -------------------------------------------------------------------------- */
+.champ__aide--correction {
+  color: #0f7b3f;
+}
+
+.lien-bouton {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--brand-blue);
+  font: inherit;
+  font-weight: var(--weight-bold);
+  text-decoration: underline;
+  cursor: pointer;
+}
