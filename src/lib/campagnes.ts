@@ -234,8 +234,13 @@ function versLigne(saisie: SaisieAffiche, avecMentions: boolean) {
  * enregistre sans elle. Les mentions sont alors perdues : l'ecran de saisie
  * le detecte (affiche renvoyee sans mentions) et previent l'utilisateur.
  */
-async function avecRepli<T>(saisie: SaisieAffiche, envoi: (data: object) => Promise<T>): Promise<T> {
-  const avecMentions = (saisie.mentions?.length ?? 0) > 0;
+async function avecRepli<T>(
+  saisie: SaisieAffiche,
+  envoi: (data: object) => Promise<T>,
+  toujoursMentions = false,
+): Promise<T> {
+  // En modification, on envoie toujours la colonne pour pouvoir vider les mentions.
+  const avecMentions = toujoursMentions || (saisie.mentions?.length ?? 0) > 0;
   try {
     return await envoi(versLigne(saisie, avecMentions));
   } catch (e) {
@@ -274,6 +279,7 @@ export async function modifierAffiche(id: string, saisie: SaisieAffiche): Promis
       rowId: id,
       data,
     }),
+    true,
   );
   return versAffiche(ligne as unknown as LigneAffiche);
 }

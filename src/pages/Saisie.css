@@ -222,3 +222,24 @@ label.bouton.est-desactive {
     min-height: 44px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Correction d'une affiche deja saisie
+   -------------------------------------------------------------------------- */
+.carte--edition {
+  outline: 2px solid #f59e0b;
+  outline-offset: -2px;
+  scroll-margin-top: var(--space-4, 16px);
+}
+
+.tableau tr.est-en-edition > * {
+  background: #fff7e6;
+}
+
+.colonne-actions {
+  white-space: nowrap;
+}
+
+.colonne-actions .bouton + .bouton {
+  margin-left: var(--space-2, 8px);
+}

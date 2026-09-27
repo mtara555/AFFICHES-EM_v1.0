@@ -7,6 +7,7 @@ import { listerMarques, type Marque } from '../lib/marques';
 import {
   ajouterAffiche,
   listerAffiches,
+  modifierAffiche,
   messageErreurCampagne,
   obtenirCampagne,
   supprimerAffiche,
@@ -52,6 +53,9 @@ export function Saisie() {
   const [promotion, setPromotion] = useState(false);
   const [mentions, setMentions] = useState<CleBadge[]>([]);
   const [alerteMentions, setAlerteMentions] = useState(false);
+  /** Affiche en cours de correction (null = ajout d'une nouvelle affiche). */
+  const [enEdition, setEnEdition] = useState<Affiche | null>(null);
+  const carteSaisie = useRef<HTMLElement>(null);
 
   const [erreur, setErreur] = useState<string | null>(null);
   const [ajout, setAjout] = useState(false);
@@ -156,9 +160,11 @@ export function Saisie() {
     setNouveaute(false);
     setPromotion(false);
     setMentions([]);
+    setEnEdition(null);
     champEan.current?.focus();
   }
 
+  /** Ajoute l'affiche, ou enregistre la correction de l'affiche en cours d'edition. */
   async function ajouter() {
     if (!campagneId || !article || !utilisateur) return;
     const N = Number(prixPrincipal.replace(',', '.'));
@@ -167,26 +173,25 @@ export function Saisie() {
       return;
     }
 
+    const saisie = {
+      ean: article.ean,
+      prixBarre: Number(prixBarre.replace(',', '.')) || 0,
+      prixPrincipal: N,
+      format,
+      stockLimite,
+      nouveaute,
+      promotion,
+      mentions,
+    };
+
     setAjout(true);
     setErreur(null);
     try {
-      const cree = await ajouterAffiche(
-        campagneId,
-        {
-          ean: article.ean,
-          prixBarre: Number(prixBarre.replace(',', '.')) || 0,
-          prixPrincipal: N,
-          format,
-          stockLimite,
-          nouveaute,
-          promotion,
-          mentions,
-        },
-        affiches.length,
-        utilisateur.id,
-      );
+      const resultat = enEdition
+        ? await modifierAffiche(enEdition.id, saisie)
+        : await ajouterAffiche(campagneId, saisie, affiches.length, utilisateur.id);
       // Mentions cochees mais non enregistrees : la colonne manque dans Appwrite.
-      setAlerteMentions(mentions.length > 0 && cree.mentions.length === 0);
+      setAlerteMentions(mentions.length > 0 && resultat.mentions.length === 0);
       reinitialiser();
       await charger();
     } catch (probleme) {
@@ -196,10 +201,28 @@ export function Saisie() {
     }
   }
 
+  /** Recharge une affiche deja saisie dans le formulaire pour la corriger. */
+  async function editer(affiche: Affiche) {
+    setErreur(null);
+    setAlerteMentions(false);
+    setEnEdition(affiche);
+    setEan(affiche.ean);
+    setPrixBarre(affiche.prixBarre > 0 ? String(affiche.prixBarre) : '');
+    setPrixPrincipal(String(affiche.prixPrincipal));
+    setFormat(affiche.format);
+    setStockLimite(affiche.stockLimite);
+    setNouveaute(affiche.nouveaute);
+    setPromotion(affiche.promotion);
+    setMentions([...affiche.mentions]);
+    carteSaisie.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    await chercherArticle(affiche.ean);
+  }
+
   async function retirer(affiche: Affiche) {
     setErreur(null);
     try {
       await supprimerAffiche(affiche.id);
+      if (enEdition?.id === affiche.id) reinitialiser();
       await charger();
     } catch (probleme) {
       setErreur(messageErreurCampagne(probleme));
@@ -229,8 +252,16 @@ export function Saisie() {
         </p>
       ) : null}
 
-      <section className="carte">
-        <h2 className="carte__titre">Ajouter une affiche</h2>
+      <section className={`carte${enEdition ? ' carte--edition' : ''}`} ref={carteSaisie}>
+        <h2 className="carte__titre">
+          {enEdition ? `Modifier l'affiche ${enEdition.ean}` : 'Ajouter une affiche'}
+        </h2>
+        {enEdition ? (
+          <p className="bandeau bandeau--alerte">
+            Correction en cours : modifiez le code, les prix, le format ou les badges, puis
+            cliquez sur « Enregistrer les modifications ».
+          </p>
+        ) : null}
 
         <div className="ligne-ean">
           <div className="champ champ--extensible">
@@ -467,10 +498,14 @@ export function Saisie() {
                 onClick={ajouter}
                 disabled={ajout || !prixPrincipal.trim()}
               >
-                {ajout ? 'Ajout…' : "Ajouter a la campagne"}
+                {ajout
+                  ? 'Enregistrement…'
+                  : enEdition
+                    ? 'Enregistrer les modifications'
+                    : 'Ajouter a la campagne'}
               </button>
               <button type="button" className="bouton bouton--discret" onClick={reinitialiser}>
-                Effacer
+                {enEdition ? 'Annuler la modification' : 'Effacer'}
               </button>
             </div>
           </>
@@ -512,7 +547,7 @@ export function Saisie() {
             </thead>
             <tbody>
               {affiches.map((affiche) => (
-                <tr key={affiche.id}>
+                <tr key={affiche.id} className={enEdition?.id === affiche.id ? 'est-en-edition' : undefined}>
                   <th scope="row" className="colonne-code">
                     {affiche.ean}
                   </th>
@@ -536,6 +571,14 @@ export function Saisie() {
                     </div>
                   </td>
                   <td className="colonne-actions">
+                    <button
+                      type="button"
+                      className="bouton bouton--discret bouton--petit"
+                      onClick={() => void editer(affiche)}
+                      disabled={ajout}
+                    >
+                      Modifier
+                    </button>
                     <button
                       type="button"
                       className="bouton bouton--danger bouton--petit"
