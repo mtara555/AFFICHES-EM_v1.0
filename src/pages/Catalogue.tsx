@@ -21,6 +21,7 @@ import { chargerVocabulaire, oublierVocabulaire, type Vocabulaire } from '../lib
 import './Catalogue.css';
 import { tracer } from '../lib/journal';
 import { useAuth } from '../context/AuthContext';
+import { DetailDemande } from '../components/DetailDemande';
 import {
   cloturerDemande,
   envoyerDemande,
@@ -65,6 +66,7 @@ export function Catalogue() {
   // Demandes d'ajout : un operateur propose, un administrateur valide.
   const [demandes, setDemandes] = useState<DemandeArticle[]>([]);
   const [demandeEnCours, setDemandeEnCours] = useState<DemandeArticle | null>(null);
+  const [idConsulte, setIdConsulte] = useState<string | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -279,8 +281,22 @@ export function Catalogue() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parametresUrl]);
 
+  /** Administrateur : consulte la demande (caracteristiques, controles, apercu). */
+  function consulter(d: DemandeArticle) {
+    const ouvert = idConsulte === d.id ? null : d.id;
+    setIdConsulte(ouvert);
+    if (ouvert) {
+      chargerVocabulaire().then(setVocabulaire).catch(() => undefined);
+      window.setTimeout(
+        () => document.getElementById('detail-demande')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+        50,
+      );
+    }
+  }
+
   /** Administrateur : ouvre le formulaire rempli avec la demande, a verifier puis creer. */
   function ouvrirValidation(d: DemandeArticle) {
+    setIdConsulte(null);
     setIdEdite(null);
     setDemandeEnCours(d);
     setSaisie(saisieDepuisDemande(d));
@@ -300,6 +316,7 @@ export function Catalogue() {
     setErreur(null);
     try {
       await cloturerDemande(d, 'rejetee', motif);
+      setIdConsulte(null);
       tracer('suppression', 'articles', `Demande d'ajout rejetee : ${d.ean} ${d.designation} (de ${d.demandeurNom})${motif ? ` — ${motif}` : ''}`);
       setMessage(`Demande « ${d.designation} » rejetee.`);
       await chargerDemandes();
@@ -660,7 +677,7 @@ export function Catalogue() {
             </thead>
             <tbody>
               {demandes.map((d) => (
-                <tr key={d.id}>
+                <tr key={d.id} className={idConsulte === d.id ? 'est-consultee' : undefined}>
                   <td>{new Date(d.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</td>
                   <th scope="row" className="colonne-code">
                     {d.ean}
@@ -685,6 +702,13 @@ export function Catalogue() {
                     <td className="colonne-actions">
                       <button
                         type="button"
+                        className="bouton bouton--discret bouton--petit"
+                        onClick={() => consulter(d)}
+                      >
+                        {idConsulte === d.id ? 'Masquer' : 'Consulter'}
+                      </button>
+                      <button
+                        type="button"
                         className="bouton bouton--principal bouton--petit"
                         onClick={() => ouvrirValidation(d)}
                       >
@@ -703,6 +727,22 @@ export function Catalogue() {
               ))}
             </tbody>
           </table>
+
+          {(() => {
+            const d = estAdmin ? demandes.find((x) => x.id === idConsulte) : undefined;
+            return d ? (
+              <div id="detail-demande">
+                <DetailDemande
+                  demande={d}
+                  marques={marques}
+                  dictionnaire={dictionnaire}
+                  surValider={() => ouvrirValidation(d)}
+                  surRejeter={() => void rejeter(d)}
+                  surFermer={() => setIdConsulte(null)}
+                />
+              </div>
+            ) : null;
+          })()}
         </section>
       ) : null}
 
