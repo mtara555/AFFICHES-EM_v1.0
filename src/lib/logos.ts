@@ -162,6 +162,7 @@ export function messageErreurLogo(erreur: unknown): string {
   if (!(erreur instanceof AppwriteException)) {
     return erreur instanceof Error ? erreur.message : 'Une erreur est survenue.';
   }
+  if (erreur.type === 'user_unauthorized') return "Vous n'avez pas les droits pour cette action.";
   if (erreur.code === 401) return 'Session expiree. Reconnectez-vous.';
   if (erreur.code === 403) return 'Seuls les administrateurs peuvent modifier les logos.';
   if (erreur.code === 413 || erreur.type === 'storage_invalid_file_size') {

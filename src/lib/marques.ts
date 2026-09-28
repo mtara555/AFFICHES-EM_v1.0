@@ -144,6 +144,7 @@ export function messageErreur(erreur: unknown): string {
     return erreur instanceof Error ? erreur.message : 'Une erreur est survenue.';
   }
   if (estDoublon(erreur)) return 'Cette marque existe deja.';
+  if (erreur.type === 'user_unauthorized') return "Vous n'avez pas les droits pour cette action.";
   if (erreur.code === 401) return 'Session expiree. Reconnectez-vous.';
   if (erreur.code === 403) return "Vous n'avez pas les droits pour cette action.";
   return erreur.message || 'Une erreur est survenue.';

@@ -253,6 +253,8 @@ export function messageErreurArticle(erreur: unknown): string {
     return erreur instanceof Error ? erreur.message : 'Une erreur est survenue.';
   }
   if (erreur.code === 409) return 'Un article porte deja ce code.';
+  // Appwrite repond 401 « user_unauthorized » quand les droits manquent : ce n'est pas une session expiree.
+  if (erreur.type === 'user_unauthorized') return "Vous n'avez pas les droits pour cette action (reservee aux administrateurs).";
   if (erreur.code === 401) return 'Session expiree. Reconnectez-vous.';
   if (erreur.code === 403) return "Vous n'avez pas les droits pour cette action.";
   return erreur.message || 'Une erreur est survenue.';

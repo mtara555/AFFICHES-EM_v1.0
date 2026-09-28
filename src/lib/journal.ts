@@ -228,6 +228,9 @@ export async function lireJournal(depuis: Date | null): Promise<EntreeJournal[]>
 
 export function messageErreurJournal(erreur: unknown): string {
   if (erreur instanceof AppwriteException) {
+    if (erreur.type === 'user_unauthorized') {
+      return "Lecture du journal refusee : verifiez dans Appwrite que la table « journal » donne le droit Read a l'equipe administrateurs.";
+    }
     if (erreur.code === 401) return 'Session expiree. Reconnectez-vous.';
     if (erreur.code === 403 || erreur.code === 404) {
       return "Lecture du journal refusee : verifiez dans Appwrite que la table « journal » donne le droit Read a l'equipe administrateurs.";

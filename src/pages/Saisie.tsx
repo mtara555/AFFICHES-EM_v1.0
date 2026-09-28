@@ -289,7 +289,7 @@ export function Saisie() {
                 if (e.key === 'Enter') void chercherArticle();
               }}
               onBlur={() => {
-                if (ean.trim() && !article) void chercherArticle();
+                if (ean.trim() && !article && !introuvable) void chercherArticle();
               }}
             />
           </div>
@@ -330,8 +330,11 @@ export function Saisie() {
 
         {introuvable ? (
           <p className="bandeau bandeau--alerte">
-            Aucun article ne porte ce code. Verifiez la saisie, ou demandez a un administrateur
-            de l&apos;ajouter au catalogue.
+            Aucun article ne porte ce code. Verifiez la saisie, ou{' '}
+            <Link to={`/catalogue?demande=${encodeURIComponent(ean.trim())}`}>
+              demandez l&apos;ajout de cet article au catalogue
+            </Link>
+            .
           </p>
         ) : null}
 

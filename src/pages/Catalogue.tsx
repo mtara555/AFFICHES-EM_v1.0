@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { listerMarques, type Marque } from '../lib/marques';
 import {
@@ -9,6 +9,7 @@ import {
   messageErreurArticle,
   modifierArticle,
   supprimerArticle,
+  trouverParEan,
   validerArticle,
   NB_PICTOS,
   type Article,
@@ -19,6 +20,16 @@ import { marqueLaPlusProche, type Correction } from '../lib/correcteur';
 import { chargerVocabulaire, oublierVocabulaire, type Vocabulaire } from '../lib/vocabulaire';
 import './Catalogue.css';
 import { tracer } from '../lib/journal';
+import { useAuth } from '../context/AuthContext';
+import {
+  cloturerDemande,
+  envoyerDemande,
+  LIBELLE_STATUT_DEMANDE,
+  listerDemandes,
+  messageErreurDemande,
+  saisieDepuisDemande,
+  type DemandeArticle,
+} from '../lib/demandes';
 
 const PAR_PAGE = 25;
 
@@ -47,6 +58,13 @@ function versSaisie(article: Article): SaisieArticle {
 }
 
 export function Catalogue() {
+  const { utilisateur } = useAuth();
+  const estAdmin = utilisateur?.role === 'administrateur';
+  const [parametresUrl, setParametresUrl] = useSearchParams();
+
+  // Demandes d'ajout : un operateur propose, un administrateur valide.
+  const [demandes, setDemandes] = useState<DemandeArticle[]>([]);
+  const [demandeEnCours, setDemandeEnCours] = useState<DemandeArticle | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -121,13 +139,62 @@ export function Catalogue() {
     void charger();
   }, [charger]);
 
+  const chargerDemandes = useCallback(async () => {
+    if (!utilisateur) return;
+    try {
+      setDemandes(await listerDemandes(estAdmin ? 'en_attente' : undefined));
+    } catch {
+      setDemandes([]); // table absente ou non lisible : la section reste vide
+    }
+  }, [utilisateur, estAdmin]);
+
+  useEffect(() => {
+    void chargerDemandes();
+  }, [chargerDemandes]);
+
   function lancerRecherche() {
     setPage(0);
     setTermeApplique(recherche);
   }
 
+  /** Operateur : envoie une demande d'ajout au lieu d'ecrire dans le catalogue. */
+  async function envoyer() {
+    if (!saisie || !utilisateur) return;
+    const problemes: string[] = [];
+    if (!saisie.ean.trim()) problemes.push('Le code article est obligatoire.');
+    if (!saisie.designation.trim()) problemes.push('La designation est obligatoire.');
+    if (!saisie.marqueId && !texteMarque.trim()) problemes.push('Indiquez la marque.');
+    if (problemes.length > 0) {
+      setErreur(problemes.join(' '));
+      return;
+    }
+    setEnregistrement(true);
+    setErreur(null);
+    setMessage(null);
+    try {
+      if (await trouverParEan(saisie.ean.trim())) {
+        setErreur(`Le code ${saisie.ean.trim()} existe deja au catalogue : inutile de le demander.`);
+        return;
+      }
+      const marqueNom = nomsMarques.get(saisie.marqueId) ?? texteMarque.trim();
+      await envoyerDemande(saisie, marqueNom, { id: utilisateur.id, nom: utilisateur.nom });
+      tracer('creation', 'articles', `Demande d'ajout envoyee : ${saisie.ean} ${saisie.designation} — ${marqueNom} ${saisie.reference}`);
+      setMessage(`Demande envoyee pour « ${saisie.designation} » (${saisie.ean}). Un administrateur va la traiter.`);
+      fermerFormulaire();
+      await chargerDemandes();
+    } catch (probleme) {
+      setErreur(messageErreurDemande(probleme));
+    } finally {
+      setEnregistrement(false);
+    }
+  }
+
   async function enregistrer() {
     if (!saisie) return;
+    if (!estAdmin) {
+      await envoyer();
+      return;
+    }
 
     const problemes = validerArticle(saisie);
     if (problemes.length > 0) {
@@ -146,8 +213,16 @@ export function Catalogue() {
         setMessage(`Article « ${saisie.designation} » modifie.`);
       } else {
         await creerArticle(saisie);
-        tracer('creation', 'articles', `Article cree : ${saisie.ean} ${saisie.designation} — ${nomsMarques.get(saisie.marqueId) ?? ''} ${saisie.reference}`);
+        tracer('creation', 'articles', `Article cree : ${saisie.ean} ${saisie.designation} — ${nomsMarques.get(saisie.marqueId) ?? ''} ${saisie.reference}${demandeEnCours ? ` (demande de ${demandeEnCours.demandeurNom || 'un operateur'})` : ''}`);
         setMessage(`Article « ${saisie.designation} » cree.`);
+        if (demandeEnCours) {
+          try {
+            await cloturerDemande(demandeEnCours, 'traitee');
+          } catch (probleme) {
+            setErreur(`Article cree, mais la demande n'a pas pu etre cloturee : ${messageErreurDemande(probleme)}`);
+          }
+          await chargerDemandes();
+        }
       }
       fermerFormulaire();
       await charger();
@@ -185,11 +260,52 @@ export function Catalogue() {
       .catch(() => setVocabulaire(null)); // sans vocabulaire, la saisie reste possible
   }
 
-  function ouvrirCreation() {
+  function ouvrirCreation(ean = '') {
     setIdEdite(null);
-    setSaisie({ ...SAISIE_VIDE, pictos: Array.from({ length: NB_PICTOS }, () => '') });
+    setDemandeEnCours(null);
+    setSaisie({ ...SAISIE_VIDE, ean, pictos: Array.from({ length: NB_PICTOS }, () => '') });
     setErreur(null);
+    setMessage(null);
     preparerAssistance('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Arrivee depuis la Saisie (« code absent du catalogue ») : formulaire pre-rempli.
+  useEffect(() => {
+    const code = parametresUrl.get('demande');
+    if (code === null) return;
+    ouvrirCreation(code);
+    setParametresUrl({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parametresUrl]);
+
+  /** Administrateur : ouvre le formulaire rempli avec la demande, a verifier puis creer. */
+  function ouvrirValidation(d: DemandeArticle) {
+    setIdEdite(null);
+    setDemandeEnCours(d);
+    setSaisie(saisieDepuisDemande(d));
+    setErreur(null);
+    setMessage(null);
+    preparerAssistance(d.marqueId);
+    if (!d.marqueId || !nomsMarques.has(d.marqueId)) {
+      setTexteMarque(d.marqueNom);
+      setAvisMarque(`Marque « ${d.marqueNom} » inconnue : creez-la d'abord dans le menu Marques, puis choisissez-la ici.`);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function rejeter(d: DemandeArticle) {
+    const motif = window.prompt(`Rejeter la demande « ${d.designation} » (${d.ean}) ?\n\nMotif (facultatif) :`, '');
+    if (motif === null) return;
+    setErreur(null);
+    try {
+      await cloturerDemande(d, 'rejetee', motif);
+      tracer('suppression', 'articles', `Demande d'ajout rejetee : ${d.ean} ${d.designation} (de ${d.demandeurNom})${motif ? ` — ${motif}` : ''}`);
+      setMessage(`Demande « ${d.designation} » rejetee.`);
+      await chargerDemandes();
+    } catch (probleme) {
+      setErreur(messageErreurDemande(probleme));
+    }
   }
 
   function ouvrirEdition(article: Article) {
@@ -202,6 +318,7 @@ export function Catalogue() {
   function fermerFormulaire() {
     setSaisie(null);
     setIdEdite(null);
+    setDemandeEnCours(null);
     setCorrections({});
     setAvisMarque(null);
   }
@@ -217,7 +334,11 @@ export function Catalogue() {
     const m = marqueLaPlusProche(texte, marques);
     if (!m) {
       setSaisie({ ...saisie, marqueId: '' });
-      setAvisMarque(`Marque « ${texte.trim()} » inconnue : creez-la d'abord dans le menu Marques.`);
+      setAvisMarque(
+        estAdmin
+          ? `Marque « ${texte.trim()} » inconnue : creez-la d'abord dans le menu Marques.`
+          : `Marque « ${texte.trim()} » absente de la liste : elle sera signalee a l'administrateur avec votre demande.`,
+      );
       return;
     }
     const corrigee = m.nom.toUpperCase() !== texte.trim().toUpperCase();
@@ -282,14 +403,20 @@ export function Catalogue() {
       titre="Catalogue"
       sousTitre={chargement ? 'Chargement…' : `${total} article(s)`}
       actions={
-        <>
-          <Link to="/catalogue/import" className="bouton bouton--discret">
-            Importer un fichier
-          </Link>
-          <button type="button" className="bouton bouton--principal" onClick={ouvrirCreation}>
-            Nouvel article
+        estAdmin ? (
+          <>
+            <Link to="/catalogue/import" className="bouton bouton--discret">
+              Importer un fichier
+            </Link>
+            <button type="button" className="bouton bouton--principal" onClick={() => ouvrirCreation()}>
+              Nouvel article
+            </button>
+          </>
+        ) : (
+          <button type="button" className="bouton bouton--principal" onClick={() => ouvrirCreation()}>
+            Demander un nouvel article
           </button>
-        </>
+        )
       }
     >
       {erreur ? (
@@ -301,7 +428,26 @@ export function Catalogue() {
 
       {saisie ? (
         <section className="carte carte--formulaire">
-          <h2 className="carte__titre">{idEdite ? "Modifier l'article" : 'Nouvel article'}</h2>
+          <h2 className="carte__titre">
+            {idEdite
+              ? "Modifier l'article"
+              : demandeEnCours
+                ? `Valider la demande de ${demandeEnCours.demandeurNom || 'un operateur'}`
+                : estAdmin
+                  ? 'Nouvel article'
+                  : "Demande d'ajout d'un article"}
+          </h2>
+          {!estAdmin ? (
+            <p className="bandeau bandeau--alerte">
+              Le catalogue est gere par les administrateurs. Remplissez ce que vous connaissez :
+              votre demande leur sera envoyee et l&apos;article sera cree apres verification.
+            </p>
+          ) : demandeEnCours ? (
+            <p className="bandeau bandeau--alerte">
+              Verifiez et completez les informations, puis cliquez sur « Creer l&apos;article et
+              valider ».
+            </p>
+          ) : null}
 
           <div className="grille">
             <div className="champ">
@@ -473,7 +619,13 @@ export function Catalogue() {
               onClick={enregistrer}
               disabled={enregistrement}
             >
-              {enregistrement ? 'Enregistrement…' : 'Enregistrer'}
+              {enregistrement
+                ? 'Enregistrement…'
+                : !estAdmin
+                  ? 'Envoyer la demande'
+                  : demandeEnCours
+                    ? "Creer l'article et valider"
+                    : 'Enregistrer'}
             </button>
             <button
               type="button"
@@ -484,6 +636,73 @@ export function Catalogue() {
               Annuler
             </button>
           </div>
+        </section>
+      ) : null}
+
+      {demandes.length > 0 ? (
+        <section className="carte carte--demandes">
+          <h2 className="carte__titre">
+            {estAdmin ? `Demandes d'ajout en attente (${demandes.length})` : 'Mes demandes d\'ajout'}
+          </h2>
+          <table className="tableau">
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Code</th>
+                <th scope="col">Article demande</th>
+                <th scope="col">{estAdmin ? 'Demandeur' : 'Statut'}</th>
+                {estAdmin ? (
+                  <th scope="col">
+                    <span className="visually-hidden">Actions</span>
+                  </th>
+                ) : null}
+              </tr>
+            </thead>
+            <tbody>
+              {demandes.map((d) => (
+                <tr key={d.id}>
+                  <td>{new Date(d.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                  <th scope="row" className="colonne-code">
+                    {d.ean}
+                  </th>
+                  <td>
+                    {d.designation}
+                    <span className="reference">
+                      {[d.marqueNom, d.reference].filter(Boolean).join(' — ')}
+                    </span>
+                  </td>
+                  <td>
+                    {estAdmin ? (
+                      d.demandeurNom || '—'
+                    ) : (
+                      <span className={`statut-demande statut-demande--${d.statut}`}>
+                        {LIBELLE_STATUT_DEMANDE[d.statut]}
+                        {d.motifRejet ? ` : ${d.motifRejet}` : ''}
+                      </span>
+                    )}
+                  </td>
+                  {estAdmin ? (
+                    <td className="colonne-actions">
+                      <button
+                        type="button"
+                        className="bouton bouton--principal bouton--petit"
+                        onClick={() => ouvrirValidation(d)}
+                      >
+                        Valider
+                      </button>
+                      <button
+                        type="button"
+                        className="bouton bouton--danger bouton--petit"
+                        onClick={() => void rejeter(d)}
+                      >
+                        Rejeter
+                      </button>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       ) : null}
 
@@ -581,20 +800,24 @@ export function Catalogue() {
                       </div>
                     </td>
                     <td className="colonne-actions">
-                      <button
-                        type="button"
-                        className="bouton bouton--discret bouton--petit"
-                        onClick={() => ouvrirEdition(article)}
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        type="button"
-                        className="bouton bouton--danger bouton--petit"
-                        onClick={() => void supprimer(article)}
-                      >
-                        Supprimer
-                      </button>
+                      {estAdmin ? (
+                        <>
+                          <button
+                            type="button"
+                            className="bouton bouton--discret bouton--petit"
+                            onClick={() => ouvrirEdition(article)}
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            type="button"
+                            className="bouton bouton--danger bouton--petit"
+                            onClick={() => void supprimer(article)}
+                          >
+                            Supprimer
+                          </button>
+                        </>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
