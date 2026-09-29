@@ -207,11 +207,11 @@ const versEntree = (l: LigneJournal): EntreeJournal => {
   };
 };
 
-/** Toutes les lignes depuis une date (lues par pages de 500, 5 000 au plus). */
+/** Toutes les lignes depuis une date (lues par pages de 500, 2 000 au plus). */
 export async function lireJournal(depuis: Date | null): Promise<EntreeJournal[]> {
   const lignes: LigneJournal[] = [];
   const PAGE = 500;
-  for (let offset = 0; offset < 5000; offset += PAGE) {
+  for (let offset = 0; offset < 2000; offset += PAGE) {
     const queries = [Query.orderDesc('date'), Query.limit(PAGE), Query.offset(offset)];
     if (depuis) queries.push(Query.greaterThanEqual('date', depuis.toISOString()));
     const reponse = await tablesDB.listRows({

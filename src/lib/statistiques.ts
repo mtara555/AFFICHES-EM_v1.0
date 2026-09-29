@@ -14,6 +14,7 @@
 
 import { Query } from 'appwrite';
 import { tablesDB, DATABASE_ID, TABLES } from './appwrite';
+import { compterLignes, ecrireCache, lectureEconome, lireCache } from './cache-local';
 import { gabaritPourCategorie, type Gabarit } from '../config/gabarits';
 import type { CategorieProduit } from '../config/constants';
 
@@ -47,11 +48,30 @@ export interface AfficheResume {
   readonly gabarit: Gabarit | null;
 }
 
-export async function chargerArticlesResume(): Promise<ArticleResume[]> {
-  const lignes = await toutLire<{ ean: string; marqueId: string; categorie: CategorieProduit }>(
-    TABLES.ARTICLES,
-    [Query.select(['ean', 'marqueId', 'categorie'])],
-  );
+interface LigneArticleResume {
+  ean: string;
+  marqueId: string;
+  categorie: CategorieProduit;
+}
+
+interface LigneAfficheResume {
+  ean: string;
+  $createdAt: string;
+}
+
+/**
+ * Articles reduits a 3 colonnes. Garde en cache dans le navigateur : relu
+ * seulement si le nombre d'articles a change (1 lecture au lieu de 2 400).
+ */
+export async function chargerArticlesResume(forcer = false): Promise<ArticleResume[]> {
+  const lignes = await lectureEconome<LigneArticleResume[]>({
+    cle: 'articles-resume',
+    tableId: TABLES.ARTICLES,
+    forcer,
+    ageMaxHeures: 24 * 7,
+    lireTout: () =>
+      toutLire<LigneArticleResume>(TABLES.ARTICLES, [Query.select(['ean', 'marqueId', 'categorie'])]),
+  });
   return lignes.map((l) => ({
     ean: l.ean,
     marqueId: l.marqueId,
@@ -59,13 +79,39 @@ export async function chargerArticlesResume(): Promise<ArticleResume[]> {
   }));
 }
 
+/**
+ * Affiches (code + date). Le cache est complete par les seules affiches
+ * creees depuis la derniere visite ; relecture complete si des affiches ont
+ * ete supprimees ou si le cache a plus de 7 jours.
+ * @param cleUtilisateur les droits different selon l'utilisateur : un cache par compte.
+ */
 export async function chargerAffichesResume(
   articles: readonly ArticleResume[],
+  cleUtilisateur: string,
+  forcer = false,
 ): Promise<AfficheResume[]> {
+  const cle = `affiches-resume.${cleUtilisateur}`;
+  const cache = forcer ? null : lireCache<LigneAfficheResume[]>(cle);
+  let lignes: LigneAfficheResume[] | null = null;
+
+  if (cache && Date.now() - cache.date < 7 * 24 * 3600_000 && cache.donnees.length > 0) {
+    const derniere = cache.donnees[cache.donnees.length - 1]!.$createdAt;
+    const nouvelles = await toutLire<LigneAfficheResume>(TABLES.AFFICHES, [
+      Query.greaterThan('$createdAt', derniere),
+      Query.orderAsc('$createdAt'),
+    ]);
+    const total = await compterLignes(TABLES.AFFICHES);
+    if (cache.donnees.length + nouvelles.length === total) lignes = [...cache.donnees, ...nouvelles];
+  }
+
+  if (!lignes) {
+    lignes = await toutLire<LigneAfficheResume>(TABLES.AFFICHES, [
+      Query.orderAsc('$createdAt'),
+    ]);
+  }
+  ecrireCache(cle, lignes.length, lignes);
+
   const gabaritParEan = new Map(articles.map((a) => [a.ean, a.gabarit]));
-  const lignes = await toutLire<{ ean: string; $createdAt: string }>(TABLES.AFFICHES, [
-    Query.orderAsc('$createdAt'),
-  ]);
   return lignes.map((l) => ({
     date: new Date(l.$createdAt),
     gabarit: gabaritParEan.get(l.ean) ?? null,

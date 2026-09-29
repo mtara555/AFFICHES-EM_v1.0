@@ -11,6 +11,7 @@
 import { Query } from 'appwrite';
 import { tablesDB, DATABASE_ID, TABLES } from './appwrite';
 import { Dictionnaire, normaliser } from './correcteur';
+import { lectureEconome, viderCaches } from './cache-local';
 import type { CategorieProduit } from '../config/constants';
 
 interface LigneVocabulaire {
@@ -46,27 +47,37 @@ export function chargerVocabulaire(): Promise<Vocabulaire> {
 /** A appeler apres creation ou modification d'un article. */
 export function oublierVocabulaire(): void {
   cache = null;
+  viderCaches('vocabulaire');
 }
 
 const compter = <K>(table: Map<K, number>, cle: K) => table.set(cle, (table.get(cle) ?? 0) + 1);
 
 async function lireCatalogue(): Promise<Vocabulaire> {
-  const lignes: LigneVocabulaire[] = [];
-  const PAGE = 500;
-  for (let offset = 0; ; offset += PAGE) {
-    const reponse = await tablesDB.listRows({
-      databaseId: DATABASE_ID,
-      tableId: TABLES.ARTICLES,
-      queries: [
-        Query.select(['designation', 'reference', 'marqueId', 'categorie']),
-        Query.limit(PAGE),
-        Query.offset(offset),
-      ],
-    });
-    const page = reponse.rows as unknown as LigneVocabulaire[];
-    lignes.push(...page);
-    if (page.length < PAGE || lignes.length >= reponse.total) break;
-  }
+  // Cache du navigateur : le catalogue n'est relu que s'il a change (1 lecture sinon).
+  const lignes = await lectureEconome<LigneVocabulaire[]>({
+    cle: 'vocabulaire',
+    tableId: TABLES.ARTICLES,
+    ageMaxHeures: 24 * 7,
+    lireTout: async () => {
+      const tout: LigneVocabulaire[] = [];
+      const PAGE = 500;
+      for (let offset = 0; ; offset += PAGE) {
+        const reponse = await tablesDB.listRows({
+          databaseId: DATABASE_ID,
+          tableId: TABLES.ARTICLES,
+          queries: [
+            Query.select(['designation', 'reference', 'marqueId', 'categorie']),
+            Query.limit(PAGE),
+            Query.offset(offset),
+          ],
+        });
+        const page = reponse.rows as unknown as LigneVocabulaire[];
+        tout.push(...page);
+        if (page.length < PAGE || tout.length >= reponse.total) break;
+      }
+      return tout;
+    },
+  });
 
   // 1. Frequence des mots des designations -> dictionnaire.
   const mots = new Map<string, number>();

@@ -43,16 +43,21 @@ export function TableauDeBord() {
   const [voirTableau, setVoirTableau] = useState(false);
   const [toutesMarques, setToutesMarques] = useState(false);
 
+  const [actualisation, setActualisation] = useState(0);
+
   useEffect(() => {
-    if (!estConfigure) {
+    if (!estConfigure || !utilisateur) {
       setChargement(false);
       return;
     }
     let actif = true;
+    const forcer = actualisation > 0;
+    setChargement(true);
     (async () => {
       try {
-        const [m, a] = await Promise.all([listerMarques(), chargerArticlesResume()]);
-        const aff = await chargerAffichesResume(a);
+        // Lectures economes : cache du navigateur, relu seulement si les donnees ont change.
+        const [m, a] = await Promise.all([listerMarques(), chargerArticlesResume(forcer)]);
+        const aff = await chargerAffichesResume(a, utilisateur.id, forcer);
         if (!actif) return;
         setMarques(m);
         setArticles(a);
@@ -66,7 +71,7 @@ export function TableauDeBord() {
     return () => {
       actif = false;
     };
-  }, []);
+  }, [utilisateur, actualisation]);
 
   function choisirPeriode(p: Periode) {
     setPeriode(p);
@@ -128,6 +133,19 @@ export function TableauDeBord() {
         utilisateur
           ? `${utilisateur.nom} — ${LIBELLE_ROLE[utilisateur.role]} · ${APP_FULL_NAME}`
           : APP_FULL_NAME
+      }
+      actions={
+        estConfigure ? (
+          <button
+            type="button"
+            className="bouton bouton--discret"
+            onClick={() => setActualisation((n) => n + 1)}
+            disabled={chargement}
+            title="Relire toutes les donnees depuis le serveur (consomme des lectures Appwrite)"
+          >
+            {chargement ? 'Chargement…' : 'Actualiser'}
+          </button>
+        ) : null
       }
     >
       {!estConfigure ? (

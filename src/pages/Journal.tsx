@@ -84,7 +84,7 @@ function exporterCsv(lignes: readonly EntreeJournal[], nom: (e: EntreeJournal) =
  * Qui s'est connecte, depuis quel appareil, et ce qui a ete saisi ou modifie.
  */
 export function Journal() {
-  const [periode, setPeriode] = useState<Periode>('7j');
+  const [periode, setPeriode] = useState<Periode>('jour');
   const [entrees, setEntrees] = useState<EntreeJournal[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
